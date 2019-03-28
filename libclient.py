@@ -4,23 +4,13 @@ import json
 import struct
 
 class Message:
-<<<<<<< HEAD
-    def __init__(self, sel, sock, addr, req):
-=======
     def __init__(self, sel, sock, addr):
->>>>>>> master
         self.sel = sel
         self.sock = sock 
         self.addr = addr
         self._send_buffer = b''
         self._recv_buffer = b''
         self._request_queued = False
-<<<<<<< HEAD
-        self.request = req
-        self._jsonheader_len = 0
-        self.jsonheader = None
-        
-=======
         self.request = None
         self._jsonheader_len = 0
         self.jsonheader = None
@@ -30,7 +20,6 @@ class Message:
     def add_new_request(self, request):
         self.request = request 
 
->>>>>>> master
     def queue_request(self):
         #content = self.request['content']
         #content_type = self.request['type']
@@ -52,10 +41,6 @@ class Message:
         self._send_buffer += message
         self._request_queued = True
         
-<<<<<<< HEAD
-    def _json_encode(self, obj):
-        return json.dumps(obj).encode('utf-8')
-=======
     # serialize data (python dict) into bytes
     def _json_encode(self, data):
         return json.dumps(data).encode('utf-8')
@@ -63,7 +48,6 @@ class Message:
     # deserialize bytes into python dict
     def _json_decode(self, data):
         return json.loads(data)
->>>>>>> master
         
     # fixed-length header
     # 2-byte integer containing length of JSON header
@@ -84,37 +68,6 @@ class Message:
                     raise ValueError(f'Missing required header "{reqhdr}".')
                     
     def process_response(self):
-<<<<<<< HEAD
-        content_len = self.jsonheader['content-length']
-        if not len(self._recv_buffer) >= content_len:
-            return
-        data = self._recv_buffer[:content_len]
-        self._recv_buffer = self._recv_buffer[content_len:]
-        if self.jsonheader['content-type'] == 'text/json':
-            encoding = self.jsonheader['content-encoding']
-            self.request = self._json_decode(data, encoding)
-            print('received request', repr(self.request), 'from', self.addr)
-        else:
-            # Binary or unknown content-type
-            self.request = data
-            print(f'received {self.jsonheader["content-type"]} request from', self.addr)
-        # close when response has been processed
-        self.close()
-            
-    def process_events(self, mask):
-        if mask & selectors.EVENT_READ:
-            pass
-            #self.read()
-        if mask & selectors.EVENT_WRITE:
-            self.write()
-        
-    def _write(self):
-        # if there's data in the send buffer
-        if self._send_buffer:
-            print("sending", repr(self._send_buffer), "to", self.addr)
-            try:
-                # Should be ready to write
-=======
         if not self._recv_buffer:
             return
             
@@ -154,7 +107,6 @@ class Message:
         if self._send_buffer:
             print("sending", repr(self._send_buffer), "to", self.addr)
             try:
->>>>>>> master
                 sent = self.sock.send(self._send_buffer)
             except BlockingIOError:
                 # Resource temporarily unavailable (errno EWOULDBLOCK)
@@ -166,14 +118,4 @@ class Message:
         if not self._request_queued:
             self.queue_request()
             
-<<<<<<< HEAD
         self._write()
-        
-        if self._request_queued:
-            if not self._send_buffer: # done writing
-                pass
-                # Set selector to listen for read events
-                #self._set_selector_events_mask('r')
-=======
-        self._write()
->>>>>>> master

@@ -16,15 +16,12 @@ if len(sys.argv) < 3:
 host = sys.argv[1]
 port = sys.argv[2]
 
-<<<<<<< HEAD
 # player, x, y: int 
 # lock grid(x,y) for player
 def lock(player, x, y):
     print("locking grid(", x, y, ") for player", player)
     pass
     
-=======
->>>>>>> master
 def test_something():
     while True:
         events = sel.select(timeout=None)
@@ -81,11 +78,7 @@ while True:
             #service_connection(key, mask)
             message = key.data 
             try:
-<<<<<<< HEAD
-                message.read()
-=======
                 message.process_events(mask)
->>>>>>> master
             except Exception:
                 print('main: error: exception for', f'{message.addr}:\n{traceback.format_exc()}')
                 message.close()

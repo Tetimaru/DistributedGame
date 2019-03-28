@@ -21,7 +21,7 @@ class gameSquare:
 
 	def lockSquare(self, lockPlayer):
 		if((self.lock == False) and (self.drawn==False)):
-			self.lock = 	
+			self.lock = True;	
 			self.lockPlayer=lockPlayer
 
 	def unlockSquare(self, lockPlayer):
