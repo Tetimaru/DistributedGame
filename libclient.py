@@ -4,39 +4,17 @@ import json
 import struct
 
 class Message:
-    def __init__(self, sel, sock, addr):
+    def __init__(self, sel, sock, addr, request):
         self.sel = sel
         self.sock = sock 
         self.addr = addr
         self._send_buffer = b''
         self._recv_buffer = b''
         self._request_queued = False
-        self.request = None
-        self._jsonheader_len = 0
-        self.jsonheader = None
+        self.request = request
         self.server_response = None
 
-        
-    def add_new_request(self, request):
-        self.request = request 
-
     def queue_request(self):
-        #content = self.request['content']
-        #content_type = self.request['type']
-        #content_encoding = self.request['encoding']
-        # if content_type == 'text/json':
-            # req = {
-                # 'content_bytes': self._json_encode(content, content_encoding),
-                # 'content_type': content_type,
-                # 'content_encoding': content_encoding
-            # }
-        # else:
-            # req = {
-                # 'content_bytes': content,
-                # 'content_type': content_type,
-                # 'content_encoding': content_encoding 
-            # }
-        #message = self._create_message(**req)
         message = self._json_encode(self.request)
         self._send_buffer += message
         self._request_queued = True
@@ -49,24 +27,6 @@ class Message:
     def _json_decode(self, data):
         return json.loads(data)
         
-    # fixed-length header
-    # 2-byte integer containing length of JSON header
-    def process_protoheader(self):
-        hdrlen = 2 
-        if len(self._recv_buffer) >= hdrlen:
-            self._jsonheader_len = struct.unpack('>H', self._recv_buffer[:hdrlen])[0]
-            self._recv_buffer = self._recv_buffer[hdrlen:]
-            
-    #
-    def process_jsonheader(self):
-        hdrlen = self._jsonheader_len
-        if len(self._recv_buffer) > hdrlen:
-            self.jsonheader = self._json_decode(self._recv_buffer[hdrlen], 'utf-8')
-            self._recv_buffer = self._recv_buffer[hdrlen:]
-            for reqhdr in ('byteorder', 'content-length', 'content-type', 'content-encoding'):
-                if reqhdr not in self.jsonheader:
-                    raise ValueError(f'Missing required header "{reqhdr}".')
-                    
     def process_response(self):
         if not self._recv_buffer:
             return
@@ -76,16 +36,21 @@ class Message:
 
         if self.server_response["function"] == "lock":
             print("Yay!")
+            # lock(x, y....)
 
         self._recv_buffer = b''
-
         
     def process_events(self, mask):
+        # needs to return a bool indicating if this message class is done, eg. make a new one
         if mask & selectors.EVENT_READ:
             self.read()
         if mask & selectors.EVENT_WRITE:
             self.write()
+
+        if self.server_response:
+            return self.server_response
     
+    # helper function to read data from the socket into _recv_buffer
     def _read(self):
         try:
             data = self.sock.recv(4096) # up to 4096 bytes
@@ -96,7 +61,7 @@ class Message:
             if data:
                 self._recv_buffer += data
             else:
-                raise RuntimeError("Peer closed.") # ???
+                raise RuntimeError("Server closed connection.") 
 
     def read(self):
         self._read()
