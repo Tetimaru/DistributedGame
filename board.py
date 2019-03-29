@@ -7,7 +7,7 @@ import unittest
 __version__ = "0.3"
 class gameSquare:
 	# Game Square variables
-	drawn=False # if square has been conquered by anyone yet
+	conquered=False # if square has been conquered by anyone yet
 	lock=False
 	belongsTo=None # player that locks this square. can be changed later to be the player's number or whatever.
 	
@@ -33,7 +33,7 @@ class Board(object):
         self.rows[self.idx] = item
         
     def __str__(self):
-        s='\n'.join([' '.join([str(item.lockPlayer) for item in row]) for row in self.rows])
+        s='\n'.join([' '.join([str(item.belongsTo) for item in row]) for row in self.rows])
         return s + '\n'
 
     def __repr__(self):
@@ -43,7 +43,7 @@ class Board(object):
     
     def reset(self):
         """ Reset the board data """
-        self.rows = [[] for x in range(self.m)]
+        self.rows = [[] for x in range(self.row)]
                      
     def save(self, filename):
         open(filename, 'w').write(str(self))
@@ -104,12 +104,13 @@ class Board(object):
 
         return mat    
 
-    def getSquare(x,y,self):  
+    def getSquare(self,x,y):  
         s = self[x][y]
         return s
 
-class BoardTests(unittest.TestCase):
+    def getState(self):
+        s='\n'.join([' '.join([str(item.belongsTo) for item in row]) for row in self.rows])
+        return s + '\n'
+
   
 
-    if __name__ == "__main__":
-        main()

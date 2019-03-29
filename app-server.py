@@ -21,9 +21,9 @@ if len(sys.argv) < 3:
 host = sys.argv[1]
 port = sys.argv[2]
 
-# player, x, y: int 
+
 # lock grid(x,y) for player
-def lock(player, x, y):
+def lockSquare(player, x, y):
     print("locking grid(", x, y, ") for player", player)
     requestedSquare= gameBoard[x][y]
     if requestedSquare.lock:
@@ -35,19 +35,23 @@ def lock(player, x, y):
         requestedSquare.belongsTo = player
         #send message back to client X that player X can drawn on Square Sx
         #send message to other clients that Player X has locked Square Sx and is drawing on it
+        #123 sendMessageToAll(lockSquare,player,x,y) We can also send 4 message to everyone
 
-def unlock(player,x,y,drawn):
+#unlock square for player x
+def unlockSquare(player,x,y,conquered):
     print("unlocking grid(", x, y, ") for player", player)
     requestedSquare= gameBoard[x][y]
-    if drawn:
+    if conquered:
        #player has conquered the box
-       requestedSquare.drawn=True
+       requestedSquare.conquered=True
        requestedSquare.belongsTo=player
        requestedSquare.lock=False
     else:
         #player has not conquered the box 
         requestedSquare.belongsTo=None
         requestedSquare.lock=False
+    #send message to all clients the square xy is unlocked
+    #123 sendMessageToAll(unlockSquare,player,x,y,requestedSquare.conquered)
 
 def test_something():
     while True:
@@ -93,6 +97,26 @@ lsock.listen()
 print('listening on', (HOST, PORT))
 lsock.setblocking(False)
 sel.register(lsock, selectors.EVENT_READ, data=None)
+
+
+'''----------TESTING----------'''
+
+
+
+print("creating game board")
+print(gameBoard)
+s= gameBoard[2][1]
+print (s.belongsTo)
+s.lockPlayer = "test"
+print (gameBoard[2][1].belongsTo)
+print(gameBoard.row)
+print(gameBoard.col)
+
+
+
+
+'''----------TESTING----------'''
+
 
 # socket event loop
 while True:

@@ -4,7 +4,7 @@ def main():
     m= Board.createBoard(5,7)
    # print (m)
     s= m[2][1]
-    print (s.lockPlayer)
+    print (s.belongsTo)
     s.lockPlayer = "test"
     print (m[2][1].lockPlayer)
     print(m.row)
