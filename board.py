@@ -25,12 +25,13 @@ class Board(object):
             self.rows = []
         self.row = m
         self.col = n
+        self.gameSquare = gameSquare
         
     def __getitem__(self, idx):
         return self.rows[idx]
 
-    def __setitem__(self, idx, item):
-        self.rows[self.idx] = item
+    def __setitem__(self, gameSquare, item):
+        self.rows[self.gameSquare] = item
         
     def __str__(self):
         s='\n'.join([' '.join([str(item.belongsTo) for item in row]) for row in self.rows])
@@ -109,7 +110,8 @@ class Board(object):
         return s
 
     def getState(self):
-        s='\n'.join([' '.join([str(item.belongsTo) for item in row]) for row in self.rows])
+
+        s=''.join([' '.join([str(item.belongsTo) for item in row]) for row in self.rows])
         return s + '\n'
 
   
