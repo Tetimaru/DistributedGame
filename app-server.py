@@ -4,6 +4,11 @@ import types
 import sys
 import libserver
 import traceback
+from board import Board
+
+#global variables
+gameBoard = Board.createBoard(8,8)
+#what is the size of the board?????
 
 # should get host and port from the command line
 HOST = '127.0.0.1'
@@ -20,8 +25,30 @@ port = sys.argv[2]
 # lock grid(x,y) for player
 def lock(player, x, y):
     print("locking grid(", x, y, ") for player", player)
-    pass
-    
+    requestedSquare= gameBoard[x][y]
+    if requestedSquare.lock:
+        pass
+        #send message back to client that square is already locked
+    else:
+        #lock square
+        requestedSquare.lock = True
+        requestedSquare.belongsTo = player
+        #send message back to client X that player X can drawn on Square Sx
+        #send message to other clients that Player X has locked Square Sx and is drawing on it
+
+def unlock(player,x,y,drawn):
+    print("unlocking grid(", x, y, ") for player", player)
+    requestedSquare= gameBoard[x][y]
+    if drawn:
+       #player has conquered the box
+       requestedSquare.drawn=True
+       requestedSquare.belongsTo=player
+       requestedSquare.lock=False
+    else:
+        #player has not conquered the box 
+        requestedSquare.belongsTo=None
+        requestedSquare.lock=False
+
 def test_something():
     while True:
         events = sel.select(timeout=None)

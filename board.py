@@ -3,7 +3,14 @@ import operator
 import sys
 import unittest
 
+
 __version__ = "0.3"
+class gameSquare:
+	# Game Square variables
+	drawn=False # if square has been conquered by anyone yet
+	lock=False
+	belongsTo=None # player that locks this square. can be changed later to be the player's number or whatever.
+	
 
 class BoardError(Exception):
     """ An exception class for Board """
@@ -13,22 +20,20 @@ class Board(object):
     
     def __init__(self, m, n, init=True):
         if init:
-            self.rows = [[0]*n for x in range(m)]
+            self.rows = [[gameSquare]*n for x in range(m)]
         else:
             self.rows = []
         self.row = m
         self.col = n
-        self.player= None 
-        self.locked= None
         
     def __getitem__(self, idx):
         return self.rows[idx]
 
     def __setitem__(self, idx, item):
-        self.rows[idx] = item
+        self.rows[self.idx] = item
         
     def __str__(self):
-        s='\n'.join([' '.join([str(item) for item in row]) for row in self.rows])
+        s='\n'.join([' '.join([str(item.lockPlayer) for item in row]) for row in self.rows])
         return s + '\n'
 
     def __repr__(self):
@@ -43,18 +48,7 @@ class Board(object):
     def save(self, filename):
         open(filename, 'w').write(str(self))
         
-    @classmethod
-    def _makeBoard(cls, rows):
-
-        m = len(rows)
-        n = len(rows[0])
-        # Validity check
-        if any([len(row) != n for row in rows[1:]]):
-            raise BoardError("inconsistent row length")
-        mat = Board(m,n, init=False)
-        mat.rows = rows
-
-        return mat
+   
         
     @classmethod
     def makeRandom(cls, m, n, low=0, high=10):
@@ -66,11 +60,10 @@ class Board(object):
         return obj
 
     @classmethod
-    def makeZero(cls, m, n):
+    def createBoard(cls, m, n):
         """ Make a zero-matrix board of rank (mxn) """
-        rows = [[0]*n for x in range(m)]
+        rows = [[gameSquare]*n for x in range(m)]
         return cls.fromList(rows)
-
 
     
     @classmethod
@@ -110,9 +103,10 @@ class Board(object):
         mat.rows = rows
 
         return mat    
-        
-    
-  
+
+    def getSquare(x,y,self):  
+        s = self[x][y]
+        return s
 
 class BoardTests(unittest.TestCase):
   
