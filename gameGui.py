@@ -1,7 +1,7 @@
 import gameSquare
 import pygame
 import playerClass
-
+from guiConfigAndFuncs import *
 
 pygame.init()
 
@@ -10,54 +10,10 @@ pygame.init()
 # size = int(input("game grid size? "))
 # gap = int(input("game grid gap? "))
 
-height = 8 # hardcode grid dimensions for now
-width = 8 
-size = 100
-gap = 1
-
-
-draw_on = False # keeps track of when you are drawing
-last_pos = (0, 0) # used for drawing function
-radius = 4 # size of drawing brush
-background = pygame.display.set_mode(((((size+gap)*height)+gap), (((size+gap)*width)+gap))) # background and screen used for GUI
-screen = pygame.display.set_mode(((((size+gap)*height)+gap), (((size+gap)*width)+gap)))
-screen.fill((0,0,0,255)) # make bg and screen all black
-background.fill((0,0,0,255))
-gameMap = None
-
-def roundline(srf, color, start, end, radius=1): # draws a roundline
-    dx = end[0]-start[0]
-    dy = end[1]-start[1]
-    distance = max(abs(dx), abs(dy))
-    for i in range(distance):
-        x = int( start[0]+float(i)/distance*dx)
-        y = int( start[1]+float(i)/distance*dy)
-        pygame.draw.circle(srf, color, (x, y), radius)
-
-def firstdraw(gameMap, height, width, size, gap): # first render of game grid
-    for y in range(height):
-        for x in range(width):
-            rect = pygame.Rect((x*size)+((x+1)*gap), (y*size)+((y+1)*gap), size, size)
-            gameMap[x][y] = gameSquare.gameSquare(rect)
-            pygame.draw.rect(screen, gameMap[x][y].squareColor, gameMap[x][y].squarePos)
-            pygame.draw.rect(background, gameMap[x][y].squareColor, gameMap[x][y].squarePos)
-
-def draw(gameMap, height, width, size, gap): # draw top layer of game grid
-    for y in range(height):
-        for x in range(width):
-            rect = pygame.Rect((x*size)+(x*gap), (y*size)+(y*gap), size, size)
-            pygame.draw.rect(screen, gameMap[x][y].squareColor, gameMap[x][y].squarePos)            
-
-def drawbg(gameMap, height, width, size, gap): # draw bg layer of game grid (for aesthetics)
-    for y in range(height):
-        for x in range(width):
-            rect = pygame.Rect((x*size)+(x*gap), (y*size)+(y*gap), size, size)
-            pygame.draw.rect(background, gameMap[x][y].squareColor, gameMap[x][y].squarePos)            
 
 gameMap = [[None for i in range(height)] for j in range(width)] # initialize matrix for storing game grid data
-p1 = playerClass.gamePlayer("chuck", 0, 255, 0) # placeholder for creating character details
+p1 = playerClass.gamePlayer("chuck", 255, 255, 0) # placeholder for creating character details
 
-clock = pygame.time.Clock()
 firstdraw(gameMap,height,width,size,gap) # render game grid
 
 rect_x = 0 # init some vars for later use
@@ -66,6 +22,8 @@ white_pixel = 0
 player_pixel = 0
 square_pixel = size*size
 conquerpercent = 0.9 # percentage of square that needs to be drawn over to conquer
+
+pygame.display.flip() # update the screen to reflect changes
 
 while True: # core game loop
     e = pygame.event.wait()
@@ -84,7 +42,6 @@ while True: # core game loop
         for i in range(height):
             for j in range(width):
                 if gameMap[i][j].squarePos.collidepoint(mouse_pos): # find which square was clicked
-                    #gameMap[i][j].squareColor = p1.color
                     print("x coordinate: " + str(i+1) +", y coordinate: " + str(j+1))
                     rect_x = i # save x,y coords for later use
                     rect_y = j
@@ -102,10 +59,6 @@ while True: # core game loop
                 # print(gameMap[rect_x][rect_y].squarePos)
             
         last_pos = e.pos # note brush strokes WILL leave the square boundaries if mouse is moved fast enough
-        
-
-    #screen.fill((0, 0, 0, 0))   
-    #draw(gameMap,height,width,size,gap)
 
     if e.type == pygame.MOUSEBUTTONUP: # when mouse button released/finished clicking
         draw_on = False # indicate no longer drawing
@@ -126,9 +79,6 @@ while True: # core game loop
             gameMap[rect_x][rect_y].revert(p1)
             # print("reverting, and square color is: "+str(gameMap[rect_x][rect_y].squareColor))
 
-
-
-        #gameMap[rect_x][rect_y].squareColor = (255,255,255,255)
         screen.fill((0,0,0,255)) # destroy everything
         background.fill((0,0,0,255))
         draw(gameMap,height,width,size,gap) # just draw everything again for the heck of it
@@ -140,4 +90,3 @@ while True: # core game loop
         player_pixel = 0
 
     pygame.display.flip() # update the screen to reflect changes
-    clock.tick(10000) # fkn idk
