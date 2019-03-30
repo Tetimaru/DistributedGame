@@ -62,7 +62,18 @@ def unlockSquare(player,x,y,conquered):
         unlockingSquare.belongsTo = None
         #THIS DOES NOT UPDATE THE GUI
         
+def synchBoardState(boardState):
+    severBoardState = boardState.split(' ')
+    localBoardState = gameBoard.getState().split(' ')
+    sBSLength= len(severBoardState)-1
+    lBSLength=len(localBoardState)-1
+    if lBSLength != sBSLength:
+        pass
+        #length of board state doesn't match error
+        #update local board state with server one
+        
 
+    
     
 
 

@@ -67,6 +67,7 @@ class Board(object):
         return cls.fromList(rows)
 
     
+    
     @classmethod
     def readStdin(cls):
         """ Read a board from standard input """
@@ -89,7 +90,7 @@ class Board(object):
         of lists """
         # E.g: Board.fromList([[1 2 3], [4,5,6], [7,8,9]])
 
-        rows = listoflists[:]
+        rows = listoflists[:5]
         return cls._makeBoard(rows)
 
     @classmethod
@@ -105,14 +106,12 @@ class Board(object):
 
         return mat    
 
-    def getSquare(self,x,y):  
-        s = self[x][y]
-        return s
-
     def getState(self):
-
-        s=''.join([' '.join([str(item.belongsTo) for item in row]) for row in self.rows])
-        return s + '\n'
+        s=''
+        for row in self.rows:
+            for item in row:
+                s=s + str(item.belongsTo)+' '
+        return s 
 
   
 

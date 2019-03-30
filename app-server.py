@@ -8,6 +8,8 @@ from board import Board
 
 #global variables
 gameBoard = Board.createBoard(8,8)
+test= 2
+
 #what is the size of the board?????
 
 # should get host and port from the command line
@@ -31,12 +33,17 @@ rdy_for_new_msg = True
 # lock grid(x,y) for player
 def lockSquare(player, x, y):
     print("locking grid(", x, y, ") for player", player)
+    print("\n")
+    #global gameBoard
     requestedSquare= gameBoard[x][y]
+  
+    
     if requestedSquare.lock:
         pass
         #send message back to client that square is already locked
     else:
         #lock square
+        print("locl sqare else \n")
         requestedSquare.lock = True
         requestedSquare.belongsTo = player
         #send message back to client X that player X can drawn on Square Sx
@@ -46,6 +53,7 @@ def lockSquare(player, x, y):
 #unlock square for player x
 def unlockSquare(player,x,y,conquered):
     print("unlocking grid(", x, y, ") for player", player)
+    
     requestedSquare= gameBoard[x][y]
     if conquered:
        #player has conquered the box
@@ -73,15 +81,12 @@ def accept_wrapper(sock):
     sel.register(conn, selectors.EVENT_READ, data=1)
     client_socks.append(conn)
 
-def isLocked(x, y):
-    print(x, y)
-    return True if (random.random() > 0.5) else False
-
 def process_request(sock, request):
     print("received", request)
-    if request["function"] == "lock":
-        locked = isLocked(request["args"]["x"], request["args"]["y"])
-        if locked:
+    if request["function"] == "lockSquare":
+        lockSquare(request["args"]["player"],request["args"]["x"],request["args"]["y"])
+        
+        if True:
             # reject the calling client 
             response = {
                 "request": "lock",
@@ -111,21 +116,25 @@ def start_listening():
     lsock.setblocking(False)
     sel.register(lsock, selectors.EVENT_READ, data=None)
 
+#Replication of board state
+def sendBoardState():
+    boardState = gameBoard.getState()
+    #sendMessage(syncBaordState,boardState)
+    
+
+
 
 '''----------TESTING----------'''
 
 
-
-print("creating game board")
-print(gameBoard)
+#print("creating game board")
+#print(gameBoard)
 s= gameBoard[2][1]
 print (s.belongsTo)
-s.lockPlayer = "test"
+s.belongsTo = "test"
 print (gameBoard[2][1].belongsTo)
-print(gameBoard.row)
-print(gameBoard.col)
-
-
+#print(gameBoard.row)
+#print(gameBoard.col)
 
 
 '''----------TESTING----------'''
