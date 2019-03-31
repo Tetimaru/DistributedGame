@@ -1,56 +1,81 @@
 import socket
 import selectors
-import json
 import struct
+import json
+import random
 
-class Message:
-    def __init__(self, sel, sock, addr, request):
-        self.sel = sel
-        self.sock = sock 
+class MessageOut:
+    def __init__(self, sel, conn, addr, request): # constructor
+        self.sel = sel 
+        self.sock = conn 
         self.addr = addr
         self._send_buffer = b''
-        self._recv_buffer = b''
-        self._request_queued = False
-        self.request = request
-        self.server_response = None
-
-    def queue_request(self):
-        message = self._json_encode(self.request)
-        self._send_buffer += message
-        self._request_queued = True
-        
+        self.outgoing_request = request
+        self.response_created = False
+         
     # serialize data (python dict) into bytes
     def _json_encode(self, data):
         return json.dumps(data).encode('utf-8')
 
+    def create_response(self):
+        message = self._json_encode(self.outgoing_request)
+        self.response_created = True
+        self._send_buffer += message
+        # send messages to all the other clients
+    
+    # returns 1 if done writing everything, 0 otherwise
+    def _write(self):
+        if self._send_buffer:
+            print('sending', repr(self._send_buffer), 'to', self.addr)
+            try:
+                sent = self.sock.send(self._send_buffer)
+            except BlockingIOError:
+                # Resource temporarily unavailable
+                pass 
+            else:
+                self._send_buffer = self._send_buffer[sent:]
+                if not self._send_buffer: # we're done writing, so monitor for read events again
+                    self.sel.modify(self.sock, selectors.EVENT_READ, data=self)
+                    return True
+
+        return False
+    
+    # returns 1 if done writing everything, 0 otherwise
+    def write(self):
+        if not self.response_created:
+            self.create_response()
+                
+        return self._write()
+
+
+class MessageIn:
+    def __init__(self, sel, conn, addr): # constructor
+        self.sel = sel 
+        self.sock = conn 
+        self.addr = addr
+        self._recv_buffer = b''
+        self.client_request = None
+    
+    def color(self, player, x, y, fill):
+        pass
+        
+    # player, x, y: int 
+    # lock grid(x,y) for player
+    def lock(self, player, x, y):
+        print("locking grid(", x, y, ") for player", player)
+
     # deserialize bytes into python dict
     def _json_decode(self, data):
         return json.loads(data)
-        
-    def process_response(self):
+                        
+    def process_read_buffer(self):
         if not self._recv_buffer:
             return
-            
-        self.server_response = self._json_decode(self._recv_buffer) # dict form
-        print('received', repr(self.server_response), 'from', self.addr)
+           
+        self.client_request = self._json_decode(self._recv_buffer) # dict form
+        print('received request', repr(self.client_request), 'from', self.addr)
 
-        if self.server_response["function"] == "lock":
-            print("Yay!")
-            # lock(x, y....)
-
-        self._recv_buffer = b''
-        
-    def process_events(self, mask):
-        # needs to return a bool indicating if this message class is done, eg. make a new one
-        if mask & selectors.EVENT_READ:
-            self.read()
-        if mask & selectors.EVENT_WRITE:
-            self.write()
-
-        if self.server_response:
-            return self.server_response
-    
-    # helper function to read data from the socket into _recv_buffer
+    # receive data from socket and store in _recv_buffer
     def _read(self):
         try:
             data = self.sock.recv(4096) # up to 4096 bytes
@@ -61,26 +86,15 @@ class Message:
             if data:
                 self._recv_buffer += data
             else:
-                raise RuntimeError("Server closed connection.") 
-
+                raise RuntimeError("server _read: received \
+                no data (shouldn't be here?)") # shouldn't happen on server side
+    
+    # entry point when data is available to be read on socket
     def read(self):
         self._read()
-        self.process_response()
+        self.process_read_buffer()
 
-    # helper function to send the data in _send_buffer through the socket
-    def _write(self):
-        if self._send_buffer:
-            print("sending", repr(self._send_buffer), "to", self.addr)
-            try:
-                sent = self.sock.send(self._send_buffer)
-            except BlockingIOError:
-                # Resource temporarily unavailable (errno EWOULDBLOCK)
-                pass
-            else:
-                self._send_buffer = self._send_buffer[sent:]
-        
-    def write(self):
-        if not self._request_queued:
-            self.queue_request()
-            
-        self._write()
+        if self.client_request:
+            return self.client_request
+    
+

@@ -51,7 +51,6 @@ class MessageIn:
         self.addr = addr
         self._recv_buffer = b''
         self.client_request = None
-        self.response_created = False
     
     def color(self, player, x, y, fill):
         pass

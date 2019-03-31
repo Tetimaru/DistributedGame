@@ -20,14 +20,12 @@ sel = selectors.DefaultSelector() # to monitor multiple socket connections
 client_socks = []
 
 # global flags
-rdy_for_new_msg = True
+rdy_for_new_msg = True # Flag to determine if the previous read/write message has completed processing
+# If True, we should create a new message class to handle the next message
 
-def test_something():
-    while True:
-        events = sel.select(timeout=None)
-        for key, mask in events:
-            message = key.data
-            message.process_events(mask)
+def setReadyForNewMsg(isReady):
+    global rdy_for_new_msg
+    rdy_for_new_msg = isReady
     
 def accept_wrapper(sock):
     conn, addr = sock.accept()
@@ -60,9 +58,23 @@ def process_request(sock, request):
             }
 
     new_messageOut(sock, response)
-    global rdy_for_new_msg
-    rdy_for_new_msg = True
+    # setReadyForNewMsg(True)
     # send messages to all the other clients
+    other_socks = [socket for socket in client_socks if socket != sock]
+    print(other_socks)
+    for socket in other_socks:
+        response = {
+            "function": "lock_board",
+            "args": {
+                "player": 1,
+                "x": 2,
+                "y": 3
+            }
+        }
+        new_messageOut(socket, response)
+
+def sendUpdateToClients(req_func):
+    pass
 
 def start_listening():
     # set up socket to listen for incoming connections
@@ -94,10 +106,9 @@ def main():
             else: # existing client socket
                 if mask & selectors.EVENT_READ:
                     # *IF* we are completely done a previous read/write, create a new message class to:
-                    global rdy_for_new_msg
                     if rdy_for_new_msg:
                         new_messageIn(key.fileobj)
-                        rdy_for_new_msg = False
+                        setReadyForNewMsg(False)
                         continue
                     messageIn = key.data                   
                     # read the data from the socket, and return it
