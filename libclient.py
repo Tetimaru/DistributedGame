@@ -96,5 +96,3 @@ class MessageIn:
 
         if self.client_request:
             return self.client_request
-    
-
