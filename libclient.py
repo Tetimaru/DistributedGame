@@ -66,7 +66,7 @@ class MessageIn:
 
     # deserialize bytes into python dict
     def _json_decode(self, data):
-        return json.loads(data)
+        return json.loads(data.decode('utf-8'))
                         
     def process_read_buffer(self):
         if not self._recv_buffer:

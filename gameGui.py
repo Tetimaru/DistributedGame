@@ -57,7 +57,6 @@ while True: # core game loop
          
                     pygame.draw.circle(screen, p1.color, mouse_pos, radius) # render the drawing circle
                     drawbg(gameMap,height,width,size,gap) # render the square in a color to indicate it is being drawn on (and locked) by a player of this color
-                    w.circle(screen,
 
     if e.type == pygame.MOUSEMOTION: # when mouse is moving
         if draw_on: # when mouse is moving AND mouse button is held

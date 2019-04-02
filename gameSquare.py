@@ -12,9 +12,7 @@ class gameSquare:
 	squareColor=(255,255,255,255) # (r,g,b,alpha). alpha is useless rn
 	# squareSurface=None # ignore this, may be used for when we get alpha working.
 
-
 	def __init__(self, pos):
-		
 		self.lock = False
 		self.belongsTo = None
 		self.squarePos=pos

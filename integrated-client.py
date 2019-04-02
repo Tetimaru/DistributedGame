@@ -19,7 +19,11 @@ PORT = 65432
 
 # pygame 
 gameMap = [[None for i in range(height)] for j in range(width)] # initialize matrix for storing game grid data
-p1 = playerClass.gamePlayer("chuck", 255, 255, 0) # placeholder for creating character details
+players = []
+
+GREEN = (0, 255, 0)
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
 
 # if len(sys.argv) < 3:
     # print("usage: ./app-server.py <host> <port>")
@@ -94,15 +98,11 @@ def create_request(request):
 
     return False
             
-def start_connection(host, port, request):
-    addr = (host, port)
+def start_connection(addr):
     print('starting connection to', addr)
     sock.setblocking(False)
     sock.connect_ex(addr)
     sel.register(sock, selectors.EVENT_READ, data=None)
-    if request:
-        while not create_request(request):
-            continue
 
 def new_messageIn(sock):
     message = libclient.MessageIn(sel, sock, (HOST, PORT))
@@ -113,7 +113,7 @@ def new_messageOut(sock, request):
     sel.modify(sock, selectors.EVENT_WRITE, data=message)
 
 def process_response(response, x, y, mouse_pos):
-    if response["request"] == "lock":
+    if response["function"] == "lock":
         # start drawing                               
         gameMap[x][y].lockSquare(p1) # lock the square player clicked on
         draw_on = True # player is now drawing
@@ -121,29 +121,110 @@ def process_response(response, x, y, mouse_pos):
         drawbg(gameMap,height,width,size,gap) # render the square in a color to indicate it is being drawn on (and locked) by a player of this color
         setReadyForNewMsg(True)
         return draw_on
+    # elif response["function"] == "new_player":
+        # add player information 
+        # color = response["args"]["color"]
+        # player = playerClass.gamePlayer("chuck", color[0], color[1], color[2])
+        # if len(players) < 1:
+            # global p1
+            # p1 = player
+        # players.append(player)
+    elif response["function"] == "lock_board":
+        # update board with other player locking 
+        gameMap[response["args"]["x"]][response["args"]["y"]].lockSquare(players[response["args"]["player"]])
+        drawbg(gameMap,height,width,size,gap)
         
     setReadyForNewMsg(True)
     return False
 
+def terminate():
+    pygame.quit()
+    sys.exit()
+    
+def checkForQuit():
+    for event in pygame.event.get(QUIT):
+       terminate()
+
+# returns if game should start (all players have connected)
+def process_pregame(payload):
+    if payload["function"] == "start":
+        # add all player information
+        player_id = payload["args"]["player_num"]
+        for i, color in enumerate(payload["args"]["player_colors"]):
+            p = playerClass.gamePlayer(player_id, color[0], color[1], color[2])
+            players.append(p)
+            if i == player_id:
+                global p1
+                p1 = p
+        
+        # start the game
+        setReadyForNewMsg(True)
+        return True
+    else:
+        print("something went wrong")
+        setReadyForNewMsg(True)
+        return False
+    
+def showStartScreen():
+    titleSurf = TITLEFONT.render('Waiting for all players to connect...', True, WHITE)
+    titleRect = titleSurf.get_rect()
+    titleRect.center = (WINDOW_WIDTH/2, WINDOW_HEIGHT/2)
+    
+    while True:
+        # socket loop
+        # if receive "start" message from server, then return (to main)
+        events = sel.select(timeout=0)
+        for key, mask in events:
+            if mask & selectors.EVENT_READ:
+                # *IF* we are completely done the previous read, create a new message class to:
+                if rdy_for_new_msg:
+                    new_messageIn(sock)
+                    setReadyForNewMsg(False)
+                    continue
+                messageIn = key.data                   
+                # read the data from the socket, and return it
+                out = messageIn.read()
+                # if data, process it and create a response 
+                if out:
+                    if process_pregame(out):
+                        return
+                    
+        # pygame loop
+        checkForQuit()
+        screen.fill(BLACK)
+        screen.blit(titleSurf, titleRect)
+        pygame.display.update()
+    
 def main():
+    global TITLEFONT, p1
+    
+    pygame.init()
+    TITLEFONT = pygame.font.SysFont('batangbatangchegungsuhgungsuhche', 36)
+    p1 = None
+    pygame.display.set_caption('Deny and Conquer')
+
+    start_connection((HOST, PORT)) # establish connection to server
+    
+    showStartScreen()
+    print("game starting")
+    print(players)
+    print(p1)
+    
     # init some vars for later use
     rect_x = 0 
     rect_y = 0
     white_pixel = 0
     player_pixel = 0
     square_pixel = size*size
-    conquerpercent = 0.9 # percentage of square that needs to be drawn over to conquer
+    conquerpercent = 0.5 # percentage of square that needs to be drawn over to conquer
     draw_on = False
     mouse_pos = None
     waiting_for_server = False
+    #p1 = playerClass.gamePlayer("chuck", 255, 255, 0) # the current player
 
-    pygame.init()
     firstdraw(gameMap,height,width,size,gap) # render game grid
     pygame.display.flip() # update the screen to reflect changes
-    if request:
-        start_connection(HOST, PORT, request)
-    else:
-        start_connection(HOST, PORT, None)
+
     while True:
         #print("At start of event loop")
         events = sel.select(timeout=0)
@@ -197,13 +278,16 @@ def main():
                             # create lock request and send it to server
                             lock_request = {
                                 "function": "lock",
+                                "player": p1.name,
                                 "args": {
                                     "x": rect_x,
                                     "y": rect_y
                                 }
                             }
+                            print(rdy_for_new_msg)
                             while not create_request(lock_request):
                                 continue
+                            print("created request")
                             #123 wait for server reply
                             waiting_for_server = True
                             #123 if lock then call lockSquare(player,i,j) 
@@ -235,6 +319,7 @@ def main():
                     #await server response
                     #123 What happens if server doesn't respond?
                     #123Merge or keep game baord seperate?
+                    print("I've conquered this square")
                     gameMap[rect_x][rect_y].conquer(p1)
 
                 else: # if not then u SUCK and try again LOSER
@@ -255,6 +340,10 @@ def main():
             
             #print("After pygame event loop")
             pygame.display.flip() # update the screen to reflect changes
+
+# Color in all squares that are owned by a player
+def drawSquares(gameMap, ):
+    pass
     
 if __name__ == '__main__':
     main()

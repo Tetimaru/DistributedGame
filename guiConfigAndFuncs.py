@@ -1,17 +1,19 @@
 import pygame
+from pygame.locals import *
 import gameSquare
 
 height = 8 # hardcode grid dimensions for now
 width = 8
-size = 100
+size = 80
 gap = 1
-
+WINDOW_WIDTH = (((size+gap)*height)+gap)
+WINDOW_HEIGHT = (((size+gap)*width)+gap)
 
 draw_on = False # keeps track of when you are drawing
 last_pos = (0, 0) # used for drawing function
 radius = 6 # size of drawing brush
-background = pygame.display.set_mode(((((size+gap)*height)+gap), (((size+gap)*width)+gap))) # background and screen used for GUI
-screen = pygame.display.set_mode(((((size+gap)*height)+gap), (((size+gap)*width)+gap)))
+background = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT)) # background and screen used for GUI
+screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 screen.fill((0,0,0,255)) # make bg and screen all black
 background.fill((0,0,0,255))
 

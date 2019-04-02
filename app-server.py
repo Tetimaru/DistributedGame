@@ -14,6 +14,11 @@ gameBoard = Board.createBoard(8,8)
 HOST = '127.0.0.1'
 PORT = 65432
 
+ALL_COLORS = [ (255, 0, 0), # red
+               (0, 255, 0), # green
+               (0, 0, 255), # blue
+               (255, 255, 0) ] # yellow 
+
 # if len(sys.argv) < 3:
     # print("usage: ./app-server.py <host> <port>")
     # sys.exit()
@@ -22,6 +27,7 @@ PORT = 65432
 # port = sys.argv[2]
 
 sel = selectors.DefaultSelector() # to monitor multiple socket connections
+NUM_PLAYERS = 2
 client_socks = []
 
 # global flags
@@ -32,7 +38,6 @@ rdy_for_new_msg = True # Flag to determine if the previous read/write message ha
 def setReadyForNewMsg(isReady):
     global rdy_for_new_msg
     rdy_for_new_msg = isReady
-
 
 # lock grid(x,y) for player
 def lockSquare(player, x, y):
@@ -71,7 +76,18 @@ def accept_wrapper(sock):
     conn.setblocking(False)
     sel.register(conn, selectors.EVENT_READ, data=1)
     client_socks.append(conn)
-
+    if len(client_socks) == NUM_PLAYERS:
+        # we have enough players to start the game, notify clients
+        for i, soc in enumerate(client_socks):
+            notification = {
+                "function": "start",
+                "args": {
+                    "player_num": i,
+                    "player_colors": ALL_COLORS[:NUM_PLAYERS]
+                }
+            }
+            new_messageOut(soc, notification)
+    
 def isLocked(x, y):
     print(x, y)
     return True if (random.random() > 0.5) else False
@@ -83,7 +99,7 @@ def process_request(sock, request):
         if locked:
             # reject the calling client 
             response = {
-                "request": "lock",
+                "function": "lock",
                 "success": 0
             }
         else: 
@@ -91,25 +107,27 @@ def process_request(sock, request):
             # send accept to calling client
             # broadcast lock action to all other client(s)
             response = {
-                "request": "lock",
+                "function": "lock",
                 "success": 1 
             }
 
-    new_messageOut(sock, response)
-    # setReadyForNewMsg(True)
-    # send messages to all the other clients
-    other_socks = [socket for socket in client_socks if socket != sock]
-    print(other_socks)
-    for socket in other_socks:
-        response = {
-            "function": "lock_board",
-            "args": {
-                "player": 1,
-                "x": 2,
-                "y": 3
+        new_messageOut(sock, response)
+        
+        # send messages to all the other clients
+        other_socks = [socket for socket in client_socks if socket != sock]
+        #print(other_socks)
+        for socket in other_socks:
+            response = {
+                "function": "lock_board",
+                "args": {
+                    "player": request["player"],
+                    "x": request["args"]["x"],
+                    "y": request["args"]["y"]
+                }
             }
-        }
-        new_messageOut(socket, response)
+            new_messageOut(socket, response)
+            
+        setReadyForNewMsg(True)
 
 def sendUpdateToClients(req_func):
     pass
@@ -124,11 +142,7 @@ def start_listening():
     lsock.setblocking(False)
     sel.register(lsock, selectors.EVENT_READ, data=None)
 
-
 '''----------TESTING----------'''
-
-
-
 # print("creating game board")
 # print(gameBoard)
 # s= gameBoard[2][1]
@@ -137,28 +151,8 @@ def start_listening():
 # print (gameBoard[2][1].belongsTo)
 # print(gameBoard.row)
 # print(gameBoard.col)
-
-
-
-
 '''----------TESTING----------'''
 
-
-# socket event loop
-# while True:
-    # events = sel.select(timeout=None)
-    # for key, mask in events:
-        # if key.data is None: # listen socket
-            new client connection
-            # accept_wrapper(key.fileobj)
-        # else: # existing client socket
-            service_connection(key, mask)
-            # message = key.data 
-            # try:
-                # message.process_events(mask)
-            # except Exception:
-                # print('main: error: exception for', f'{message.addr}:\n{traceback.format_exc()}')
-                # message.close()
 def new_messageIn(sock):
     message = libserver.MessageIn(sel, sock, (HOST, PORT))
     sel.modify(sock, selectors.EVENT_READ, data=message)
@@ -168,8 +162,7 @@ def new_messageOut(sock, request):
     sel.modify(sock, selectors.EVENT_WRITE, data=message)
     
 def main():
-    start_listening()
-   
+    start_listening()   
     # socket event loop
     while True:
         events = sel.select(timeout=None)

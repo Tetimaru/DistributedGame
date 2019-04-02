@@ -2,7 +2,7 @@ import socket
 
 class gamePlayer:
 
-	name=""
+	name=-1
 	color=(255,255,255)
 	lockColor=(255,255,255)
 
