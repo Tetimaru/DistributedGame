@@ -40,10 +40,15 @@ def setReadyForNewMsg(isReady):
     rdy_for_new_msg = isReady
 
 # lock grid(x,y) for player
-def lockSquare(player, x, y):
+def lockSquare(sock,player, x, y):
     print("locking grid(", x, y, ") for player", player)
     requestedSquare= gameBoard[x][y]
     if requestedSquare.lock:
+        response = {
+                "function": "lock",
+                "success": 1 
+        }
+        new_messageOut(sock,response)
         return False
     else:
         #lock square
@@ -53,12 +58,12 @@ def lockSquare(player, x, y):
             "function": "lock",
             "success": 1 
         }
-        new_messageOut(socket, response)
+        new_messageOut(sock, response)
         return True
 
         
 #unlock square for player x
-def unlockSquare(player,x,y,conquered):
+def unlockSquare(sock,player,x,y,conquered):
     print("unlocking grid(", x, y, ") for player", player)
     requestedSquare= gameBoard[x][y]
     if conquered:
@@ -76,7 +81,7 @@ def unlockSquare(player,x,y,conquered):
                     "conquered": True
                 }
             }
-        new_messageOut(socket, response)
+        new_messageOut(sock, response)
         return True
 
     else:
@@ -93,7 +98,7 @@ def unlockSquare(player,x,y,conquered):
                     "conquered": False
                 }
         }
-        new_messageOut(socket, response)
+        new_messageOut(sock, response)
         return False
 
     
@@ -121,12 +126,13 @@ def process_request(sock, request):
     #locking request
     if request["function"] == "lock":
     
-        locked=lockSquare(request["player"],request["args"]["x"],request["args"]["y"])        
+        locked=lockSquare(sock,request["player"],request["args"]["x"],request["args"]["y"])        
         # send messages to all the other clients
         other_socks = [socket for socket in client_socks if socket != sock]
         #print(other_socks)
 
         if locked:
+            print("LOCK REQUEST APPROVED")
             for socket in other_socks:
                 response = {
                     "function": "lock_square",
@@ -141,7 +147,7 @@ def process_request(sock, request):
 
     #unlock request    
     elif request["function"] == "unlock_square":
-        conquered= unlockSquare(request["player"],request["args"]["x"],request["args"]["y"],request["args"]["conquered"])        #send messages to all other clients
+        conquered= unlockSquare(sock,request["player"],request["args"]["x"],request["args"]["y"],request["args"]["conquered"])        #send messages to all other clients
         other_socks = [socket for socket in client_socks if socket != sock]
         for socket in other_socks:
             response = {
