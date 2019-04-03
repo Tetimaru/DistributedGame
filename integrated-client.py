@@ -205,7 +205,6 @@ def showStartScreen():
     
 def main():
     global TITLEFONT, p1
-    screen.fill(BLACK)
     pygame.init()
     TITLEFONT = pygame.font.SysFont('batangbatangchegungsuhgungsuhche', 36)
     p1 = None
@@ -214,10 +213,11 @@ def main():
     start_connection((HOST, PORT)) # establish connection to server
     
     showStartScreen()
+    screen.fill(BLACK)
     print("game starting")
     print(players)
     print(p1)
-    time.sleep(4)
+    time.sleep(2)
     
     # init some vars for later use
     rect_x = 0 
