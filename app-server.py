@@ -1,3 +1,5 @@
+import os
+import urllib.request
 import socket
 import selectors
 import sys
@@ -11,7 +13,9 @@ gameBoard = Board.createBoard(8,8)
 #what is the size of the board?????
 
 # should get host and port from the command line
-HOST = '127.0.0.1'
+
+HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8')
+# HOST = '127.0.0.1'
 PORT = 65432
 
 ALL_COLORS = [ (255, 0, 0), # red

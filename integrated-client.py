@@ -1,3 +1,6 @@
+import os
+import urllib.request
+import time
 import socket
 import selectors
 import sys
@@ -14,7 +17,12 @@ player = None #get player before game starts from server
 requestedSquare= None
 
 # should get host and port from the command line
-HOST = '127.0.0.1'
+
+addrArg = input("input IP address of game Host: ")
+if (addrArg == ""):
+    HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8')
+else:
+    HOST = str(addrArg)
 PORT = 65432
 
 # pygame 
@@ -197,7 +205,7 @@ def showStartScreen():
     
 def main():
     global TITLEFONT, p1
-    
+    screen.fill(BLACK)
     pygame.init()
     TITLEFONT = pygame.font.SysFont('batangbatangchegungsuhgungsuhche', 36)
     p1 = None
@@ -209,6 +217,7 @@ def main():
     print("game starting")
     print(players)
     print(p1)
+    time.sleep(4)
     
     # init some vars for later use
     rect_x = 0 
