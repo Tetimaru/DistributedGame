@@ -44,11 +44,11 @@ def clockSync():
     update = {
 	"function": "clock_sync",
 	"args": {
-	    "server_clock": 
+	    "server_clock": int(round(time.time()*1000))
 	}
     }
     for sock in all_socks:
-	new_messageOut(sock, update)
+        new_messageOut(sock, update)
 	
 
 def setReadyForNewMsg(isReady):
@@ -213,9 +213,7 @@ def new_messageOut(sock, request):
 def main():
     start_listening()
     # socket event loop
-    internalClock = 0
     while True:
-	internalClock+
         events = sel.select(timeout=None)
         for key, mask in events:
             if key.data is None: # listen socket
@@ -242,9 +240,9 @@ def main():
                     messageOut = key.data
                     out = messageOut.write()
 
-	if (int(round(time.time()))%2 == 0):
-	    clockSync()
-	    print('synching clocks')
+        if (int(round(time.time()))%2 == 0):
+            clockSync()
+            print('synching clocks')
 if __name__ == "__main__":
     main()
 
