@@ -15,6 +15,7 @@ from guiConfigAndFuncs import *
 gameBoard= Board.createBoard(8,8)
 player = None #get player before game starts from server
 requestedSquare= None
+time_diff = 0
 
 
 # should get host and port from the command line
@@ -114,7 +115,9 @@ def new_messageOut(sock, request):
     sel.modify(sock, selectors.EVENT_WRITE, data=message)
 
 def process_response(response, x, y, mouse_pos):
-    if response["function"] == "lock":
+    if response["function"] == "clock_sync":
+	time_diff = response["args"]["server_clock"] - int(round(time.time()*1000))
+    elif response["function"] == "lock":
         #update board state this is not gui
         lockingSquare = gameBoard[x][y]
         lockingSquare.lock = True
@@ -290,6 +293,7 @@ def main():
                                 "function": "lock",
                                 "player": p1.name,
                                 "args": {
+				    "tstamp": int(round(time.time()*1000)) + time_diff
                                     "x": rect_x,
                                     "y": rect_y
                                 }
@@ -329,6 +333,7 @@ def main():
                                 "function": "unlock_square",
                                 "player": p1.name,
                                 "args": {
+				    "tstamp": int(round(time.time()*1000)) + time_diff
                                     "x": rect_x,
                                     "y": rect_y,
                                     "conquered": True
@@ -347,6 +352,7 @@ def main():
                                 "function": "unlock_square",
                                 "player": p1.name,
                                 "args": {
+				    "tstamp": int(round(time.time()*1000)) + time_diff
                                     "x": rect_x,
                                     "y": rect_y,
                                     "conquered": False

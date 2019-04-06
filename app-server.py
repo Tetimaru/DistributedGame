@@ -1,4 +1,5 @@
 import os
+import time
 import urllib.request
 import socket
 import selectors
@@ -10,7 +11,6 @@ from board import Board
 
 #global variables
 gameBoard = Board.createBoard(8,8)
-#what is the size of the board?????
 
 # should get host and port from the command line
 
@@ -38,6 +38,18 @@ client_socks = []
 rdy_for_new_msg = True # Flag to determine if the previous read/write message has completed processing
 # If True, we should create a new message class to handle the next message
 
+
+def clockSync():
+    all_socks = [socket for socket in client_socks]
+    update = {
+	"function": "clock_sync",
+	"args": {
+	    "server_clock": 
+	}
+    }
+    for sock in all_socks:
+	new_messageOut(sock, update)
+	
 
 def setReadyForNewMsg(isReady):
     global rdy_for_new_msg
@@ -199,9 +211,11 @@ def new_messageOut(sock, request):
     sel.modify(sock, selectors.EVENT_WRITE, data=message)
     
 def main():
-    start_listening()   
+    start_listening()
     # socket event loop
+    internalClock = 0
     while True:
+	internalClock+
         events = sel.select(timeout=None)
         for key, mask in events:
             if key.data is None: # listen socket
@@ -228,7 +242,9 @@ def main():
                     messageOut = key.data
                     out = messageOut.write()
 
-    
+	if (int(round(time.time()))%2 == 0):
+	    clockSync()
+	    print('synching clocks')
 if __name__ == "__main__":
     main()
 
