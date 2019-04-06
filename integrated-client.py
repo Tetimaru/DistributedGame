@@ -16,6 +16,7 @@ gameBoard= Board.createBoard(8,8)
 player = None #get player before game starts from server
 requestedSquare= None
 
+
 # should get host and port from the command line
 
 addrArg = input("input IP address of game Host: ")
@@ -57,26 +58,15 @@ if len(sys.argv) > 1:
     }
     print("sending request")
 
-#Player requests to lock(x,y) from server
-#Asssume this can only be called for valid lock requests
-def lockSquareReq(x, y):
-    print("request to lock square(", x, y, ") for player", player)
-    #send message back to client X that player X can drawn on Square Sx
-    #send message to other clients that Player X has locked Square Sx and is drawing on it
-    #123 sendMessageToServer(lockSquare,player,x,y)
-
-#request to unlock square for player 
-#Assume only valid unlock
-def unlockSquareReq(x,y,conquered):
-    print("request to unlock square(", x, y, ") for player", player)
-    #123 sendMessageToServer(unlockSquare, player,x,y,conquered)
-
 #server tell client to lock square xy for player x
 def lockSquare(player,x,y):
+    p=players[player]
     lockingSquare = gameBoard[x][y]
     lockingSquare.lock = True
-    lockingSquare.belongsTo = player
-    #THIS DOES NOT UPDATE THE GUI
+    lockingSquare.belongsTo = p
+    gameMap[x][y].lockSquare(players[player])
+    drawbg(gameMap,height,width,size,gap)
+
 
 #server tell client to unlock square xy for player x
 def unlockSquare(player,x,y,conquered):
@@ -86,12 +76,16 @@ def unlockSquare(player,x,y,conquered):
         #square is conquered by player
         unlockingSquare.conquered = True
         unlockingSquare.belongsTo = player
-        #THIS DOES NOT UPDATE THE GUI
+        print("I've conquered square[%d][%d]",x,y)
+        gameMap[x][y].conquer(players[player])
+
     else:
         #suqare is not conquered by player
         unlockingSquare.conquered = False
         unlockingSquare.belongsTo = None
-        #THIS DOES NOT UPDATE THE GUI
+        print("square [%d][%d] is unconquered",x,y)
+        gameMap[x][y].revert(players[player])
+  
 
 def setReadyForNewMsg(isReady):
     global rdy_for_new_msg
@@ -103,7 +97,6 @@ def create_request(request):
         new_messageOut(sock, request)
         setReadyForNewMsg(False)
         return True
-
     return False
             
 def start_connection(addr):
@@ -122,6 +115,10 @@ def new_messageOut(sock, request):
 
 def process_response(response, x, y, mouse_pos):
     if response["function"] == "lock":
+        #update board state this is not gui
+        lockingSquare = gameBoard[x][y]
+        lockingSquare.lock = True
+        lockingSquare.belongsTo = p1
         # start drawing                               
         gameMap[x][y].lockSquare(p1) # lock the square player clicked on
         draw_on = True # player is now drawing
@@ -137,10 +134,15 @@ def process_response(response, x, y, mouse_pos):
             # global p1
             # p1 = player
         # players.append(player)
-    elif response["function"] == "lock_board":
+    elif response["function"] == "lock_square":
         # update board with other player locking 
-        gameMap[response["args"]["x"]][response["args"]["y"]].lockSquare(players[response["args"]["player"]])
-        drawbg(gameMap,height,width,size,gap)
+        lockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"])
+        setReadyForNewMsg(True)
+       
+    elif response["function"] == "unlock_square":
+        unlockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"],response["args"]["conquered"])
+        setReadyForNewMsg(True)
+
         
     setReadyForNewMsg(True)
     return False
@@ -284,7 +286,6 @@ def main():
                             if gameMap[i][j].lock:
                                 pass #not sure if this works test it!
                             #123 send lock request lockSquareReq(i,j)
-                            # create lock request and send it to server
                             lock_request = {
                                 "function": "lock",
                                 "player": p1.name,
@@ -318,24 +319,49 @@ def main():
                 pxarray=pygame.PixelArray(screen) # some bullshit
                 for x in range(left_border,left_border+size):
                     for y in range(top_border, top_border+size):
-
                         if pxarray[x,y]!=screen.map_rgb(p1.color): # check color of all pixels in square
                             white_pixel += 1
                         else: # if not player's color, then count it yas white pixel, else count it as player pixel
                             player_pixel +=1
-                if (player_pixel/square_pixel >= conquerpercent): # if there are more x percentage player pixels than non-player pixels, then yay you conquered it
-                    #123 send request to unlock square unlockSquareReq(x,y,True)
+                if (player_pixel/square_pixel >= conquerpercent): # player conquered square
+                    #send request to unlock conquered square
+                    unlock_request = {
+                                "function": "unlock_square",
+                                "player": p1.name,
+                                "args": {
+                                    "x": rect_x,
+                                    "y": rect_y,
+                                    "conquered": True
+                                }
+                            }
                     #await server response
-                    #123 What happens if server doesn't respond?
-                    #123Merge or keep game baord seperate?
-                    print("I've conquered this square")
-                    gameMap[rect_x][rect_y].conquer(p1)
-
-                else: # if not then u SUCK and try again LOSER
-                    #123 send request to unlock square unlockSquareReq(x,y,False)
+                    print(rdy_for_new_msg)
+                    while not create_request(unlock_request):
+                        continue
+                    print("created unlock request for conquered square")
+                        #wait for server reply
+                    waiting_for_server = True
+                else:    #player failed to conquer
+                    #send request to unlock unconquered square
+                    unlock_request = {
+                                "function": "unlock_square",
+                                "player": p1.name,
+                                "args": {
+                                    "x": rect_x,
+                                    "y": rect_y,
+                                    "conquered": False
+                                }
+                            }
                     #await server response
-                    gameMap[rect_x][rect_y].revert(p1)
-                    # print("reverting, and square color is: "+str(gameMap[rect_x][rect_y].squareColor))
+                    print(rdy_for_new_msg)
+                    while not create_request(unlock_request):
+                        continue
+                    print("created unlock request for unconquered square")
+                    #wait for server reply
+                    waiting_for_server = True
+                    
+                
+                    
 
                 screen.fill((0,0,0,255)) # destroy everything
                 background.fill((0,0,0,255))

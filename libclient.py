@@ -79,7 +79,7 @@ class MessageIn:
     def _read(self):
         try:
             data = self.sock.recv(4096) # up to 4096 bytes
-            #print(repr(data))
+            print(repr(data))
         except BlockingIOError: # Resource temporarily unavailable (errno EWOULDBLOCK)
             pass
         else:

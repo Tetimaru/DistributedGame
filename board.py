@@ -110,9 +110,14 @@ class Board(object):
         return s
 
     def getState(self):
-
-        s=''.join([' '.join([str(item.belongsTo) for item in row]) for row in self.rows])
-        return s + '\n'
-
+        s=' '.join([' '.join([str(item.belongsTo) for item in row]) for row in self.rows])
+        return s.split(' ')
+    
+    def updateState(self,list):
+        #defualt board is 8x8
+        for i in range(2):
+            for j in range(2):
+                self[i][j].belongsTo = list[i+j]
+        return self
   
 
