@@ -163,7 +163,7 @@ class Board(object):
         for i in range(self.row):
             for j in range(self.col):
                 print(list[i+j])
-                self[i][j].belongsTo = list[l]
+                self[i][j].belongsTo = int(list[l])
                 l+=1
         return self
   
