@@ -32,7 +32,7 @@ ALL_COLORS = [ (255, 0, 0), # red
 
 sel = selectors.DefaultSelector() # to monitor multiple socket connections
 
-NUM_PLAYERS = int(sys.argv(1))
+NUM_PLAYERS = int(sys.argv[1])
 clients = [] # list of ConnectedPlayer objects
 clock_sync_frequency = 3 * 1000000 # 1,000,000 roughly equals to 1.5 seconds
 
