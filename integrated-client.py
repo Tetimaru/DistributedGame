@@ -345,17 +345,9 @@ def main():
                 # read the data from the socket, and return it
                 out = messageIn.read()
                 # if data, process it and create a response 
-                #if out == False
+                if out == False:
                     #Main server has crashed
-                    #pause game
-                    while not gamePaused():
-                        continue
-                    print("created unlock request for unconquered square")
-                    #wait for server reply
-                    waiting_for_server = True
-                    #run process for starting backup server or connecting to it
-                    #pausegame()
-                    #serverCrash()
+                    serverCrash()
                 if out:
                     process_response(out, rect_x, rect_y, mouse_pos)
                     waiting_for_server = False
