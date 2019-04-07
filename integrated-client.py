@@ -117,6 +117,9 @@ def new_messageOut(sock, request):
 def process_response(response, x, y, mouse_pos):
     if response["function"] == "clock_sync":
         time_diff = response["args"]["server_clock"] - int(round(time.time()*1000))
+        print("RECEIVED CLOCK SYNC!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+        setReadyforNewMsg(True)
+        return time_diff
     elif response["function"] == "lock":
         #update board state this is not gui
         lockingSquare = gameBoard[x][y]

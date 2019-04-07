@@ -212,8 +212,13 @@ def new_messageOut(sock, request):
     
 def main():
     start_listening()
+    timecounter = 0
     # socket event loop
     while True:
+        if timecounter==4:
+            clockSync()
+            print('synching clocks')
+            timecounter=0
         events = sel.select(timeout=None)
         for key, mask in events:
             if key.data is None: # listen socket
@@ -239,10 +244,8 @@ def main():
                     # write the data to the socket
                     messageOut = key.data
                     out = messageOut.write()
-
-        if (int(round(time.time()))%2 == 0):
-            clockSync()
-            print('synching clocks')
+        timecounter+=1
+        print(str(timecounter))
 if __name__ == "__main__":
     main()
 
