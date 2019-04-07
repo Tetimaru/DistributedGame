@@ -23,7 +23,7 @@ time_diff = 0
 
 
 # should get host and port from the command line
-HOST = '142.58.15.59'
+HOST = '127.0.0.1'
 
 # addrArg = input("input IP address of game Host: ")
 # if (addrArg == ""):
@@ -97,11 +97,11 @@ def start_connection(addr):
 
 #server tell client to lock square xy for player x
 def lockSquare(player,x,y):
-    p=players[player]
+    p=players[player-1]
     lockingSquare = gameBoard[x][y]
     lockingSquare.lock = True
     lockingSquare.belongsTo = p
-    gameMap[x][y].lockSquare(players[player])
+    gameMap[x][y].lockSquare(players[player-1])
     drawbg(gameMap,height,width,size,gap)
 
 
@@ -113,15 +113,15 @@ def unlockSquare(player,x,y,conquered):
         #square is conquered by player
         unlockingSquare.conquered = True
         unlockingSquare.belongsTo = player
-        print("I've conquered square[%d][%d]"%(x,y))
-        gameMap[x][y].conquer(players[player])
+        print("I've conquered square[%d][%d]",x,y)
+        gameMap[x][y].conquer(players[player-1])
 
     else:
         #suqare is not conquered by player
         unlockingSquare.conquered = False
         unlockingSquare.belongsTo = None
-        print("square [%d][%d] is unconquered"% (x,y))
-        gameMap[x][y].revert(players[player])
+        print("square [%d][%d] is unconquered",x,y)
+        gameMap[x][y].revert(players[player-1])
   
 
 def setReadyForNewMsg(isReady):
@@ -161,47 +161,39 @@ def process_response(response, x, y, mouse_pos):
         pygame.draw.circle(screen, p1.color, mouse_pos, radius) # render the drawing circle
         drawbg(gameMap,height,width,size,gap) # render the square in a color to indicate it is being drawn on (and locked) by a player of this color
         drawing = True
-    # elif response["function"] == "new_player":
-        # add player information 
-        # color = response["args"]["color"]
-        # player = playerClass.gamePlayer("chuck", color[0], color[1], color[2])
-        # if len(players) < 1:
-            # global p1
-            # p1 = player
-        # players.append(player)
     elif response["function"] == "lock_square":
         # update board with other player locking 
         lockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"])
         drawSquare(gameMap, response["args"]["x"], response["args"]["y"])
-       
+        setReadyForNewMsg(True)      
     elif response["function"] == "unlock_square":
         unlockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"],response["args"]["conquered"])
         drawSquare(gameMap, response["args"]["x"], response["args"]["y"])
-
+        setReadyForNewMsg(True)
 
     setReadyForNewMsg(True)
     return False
 
+# close the client
 def terminate():
     pygame.quit()
     sys.exit()
-    
+
+# check for quit (click X at top right) events and terminate if so
 def checkForQuit():
     for event in pygame.event.get(QUIT):
        terminate()
     
-
 # returns if game should start (all players have connected)
 def process_pregame(payload):
-
     if payload["function"] == "start":
         # add all player information
         player_id = payload["args"]["player_id"]
-    
+        addresses = payload["args"]["player_addrs"]
         playerIsBackup = payload["args"]["player_isbackup"]
-
-        for i, color in enumerate(ALL_COLORS):
-            p = playerClass.gamePlayer(i+1, color[0], color[1], color[2])
+        print(addresses)
+        for i, color in enumerate(ALL_COLORS[:2]):
+            p = playerClass.gamePlayer(i+1, color, addresses[i])
             players.append(p)
             if i+1 == player_id:
                 global p1
@@ -273,7 +265,7 @@ def getPlayer(playerID):#get player object from player id
         if player.id==playerID:
             return player
 
-def updateServerState(sock):# send the server the current state of board
+def updateServerState():# send the server the current state of board
     #only happen when backup server is being created
     boardstate=gameBoard.getState()
     updateServerBoard_request = {
@@ -332,7 +324,6 @@ def main():
     draw_on = False
     mouse_pos = None
     waiting_for_server = False
-    #p1 = playerClass.gamePlayer("chuck", 255, 255, 0) # the current player
 
     firstdraw(gameMap,height,width,size,gap) # render game grid
     pygame.display.flip() # update the screen to reflect changes
@@ -351,10 +342,11 @@ def main():
                 # read the data from the socket, and return it
                 out = messageIn.read()
                 # if data, process it and create a response 
-                if out == False
+                if out == False:
                     # Main server has crashed
                     serverCrash()
                     updateServerState()
+                    return
 
                 if out:
                     process_response(out, rect_x, rect_y, mouse_pos)
@@ -366,12 +358,13 @@ def main():
                 doneWriting = messageOut.write()
                 setReadyForNewMsg(doneWriting)
         
+        checkForQuit()
         #print("Between socket and pygame event loop")
         if not waiting_for_server:
             e = pygame.event.poll()
             if e.type == pygame.KEYDOWN: 
                 if e.key == pygame.K_ESCAPE: # press esc to exit game
-                    raise StopIteration
+                    terminate()
                 if e.key == pygame.K_SPACE: # press space to clear board (for debug use only)
                     for i in range(height):
                         for j in range(width):
@@ -470,9 +463,6 @@ def main():
                     #wait for server reply
                     waiting_for_server = True
                     
-                
-                    
-
                 screen.fill((0,0,0,255)) # destroy everything
                 background.fill((0,0,0,255))
                 draw(gameMap,height,width,size,gap) # just draw everything again for the heck of it

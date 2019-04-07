@@ -14,8 +14,8 @@ gameBoard = Board.createBoard(8,8)
 
 # should get host and port from the command line
 
-HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8')
-# HOST = '127.0.0.1'
+#HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8')
+HOST = '127.0.0.1'
 PORT = 65432
 
 ALL_COLORS = [ (255, 0, 0), # red
@@ -41,19 +41,19 @@ rdy_for_new_msg = True # Flag to determine if the previous read/write message ha
 # If True, we should create a new message class to handle the next message
 
 class ConnectedPlayer(object):
-    def __init__(sock, color, addr, id):
+    def __init__(self, sock, color, addr, id):
         self.sock = sock
         self.color = color
         self.addr = addr
         self.id = id 
 
 def clockSync():
-    all_socks = [socket for socket in client_socks]
+    all_socks = [client.sock for client in clients]
     update = {
-	"function": "clock_sync",
-	"args": {
-	    "server_clock": int(round(time.time()*1000))
-	}
+    	"function": "clock_sync",
+    	"args": {
+    	    "server_clock": int(round(time.time()*1000))
+    	}
     }
     for sock in all_socks:
         new_messageOut(sock, update)
@@ -133,6 +133,7 @@ def accept_wrapper(sock):
     sel.register(conn, selectors.EVENT_READ, data=1)
     new_player = ConnectedPlayer(conn, ALL_COLORS[len(clients)], addr, len(clients)+1)
     clients.append(new_player)
+    print(clients)
     if len(clients) == NUM_PLAYERS:
         # we have enough players to start the game, notify clients
         backupChosen=False
@@ -146,15 +147,18 @@ def accept_wrapper(sock):
                 "function": "start",
                 "args": {
                     "player_num": player.id,
-                    "player_color": player.color,
-                    "player_addr": player.addr,
-                    "player_isbackup":isBackup
+                    "player_addrs": [client.addr for client in clients],
+                    "player_isbackup": isBackup
                 }
             }
+            print(player)
+            print("in clients loop")
+            
 
             new_messageOut(player.sock, notification)
-            return True
-
+    
+    return True
+    
 
 def process_request(sock, request):
     print("received", request)
@@ -277,11 +281,11 @@ def main():
                     # write the data to the socket
                     messageOut = key.data
                     out = messageOut.write()
-        if timecounter%clock_sync_frequency==0 and sync_ok==True:
-            clockSync()
-            print('synching clocks')
-            timecounter=0
-        timecounter+=1
+        # if timecounter%clock_sync_frequency==0 and sync_ok==True:
+        #     clockSync()
+        #     print('synching clocks')
+        #     timecounter=0
+        # timecounter+=1
 #        print(str(timecounter))
 if __name__ == "__main__":
     main()

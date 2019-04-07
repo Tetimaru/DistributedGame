@@ -63,7 +63,7 @@ class Board(object):
         self.col = col
         
     def __getitem__(self, idx):
-        print(self.rows[idx])
+        #print(self.rows[idx])
         return self.rows[idx]
 
     def __setitem__(self, idx, item):
@@ -71,15 +71,6 @@ class Board(object):
         
     def __str__(self):
         s='\n'.join([' '.join([str(item.belongsTo) for item in row]) for row in self.rows])
-        '''
-        s=' '
-        for row in self.rows:
-            s.join(' ')
-            for item in row:
-                print(self)
-                player=self[item].belongsTo
-            s.join(str(player))
-        '''
         return s + '\n'        
 
     def __repr__(self):
@@ -162,8 +153,7 @@ class Board(object):
         l=0
         for i in range(self.row):
             for j in range(self.col):
-                print(list[i+j])
-                self[i][j].belongsTo = int(list[l])
+                self[i][j].belongsTo = list[l]
                 l+=1
         return self
   
