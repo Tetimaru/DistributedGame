@@ -81,7 +81,7 @@ class playerAssociation(object):
 
 def startNewServer():
     # start a new server process
-    args = ['python', 'app-server.py']
+    args = ['python', 'app-server.py','3']
     p = subprocess.Popen(args)
     # connect to new server
     sel.unregister(sock)
@@ -113,14 +113,14 @@ def unlockSquare(player,x,y,conquered):
         #square is conquered by player
         unlockingSquare.conquered = True
         unlockingSquare.belongsTo = player
-        print("I've conquered square[%d][%d]",x,y)
+        print("I've conquered square[%d][%d]"%(x,y))
         gameMap[x][y].conquer(players[player])
 
     else:
         #suqare is not conquered by player
         unlockingSquare.conquered = False
         unlockingSquare.belongsTo = None
-        print("square [%d][%d] is unconquered",x,y)
+        print("square [%d][%d] is unconquered"% (x,y))
         gameMap[x][y].revert(players[player])
   
 
@@ -147,8 +147,10 @@ def new_messageOut(sock, request):
 def process_response(response, x, y, mouse_pos):
     if response["function"] == "clock_sync":
         time_diff = response["args"]["server_clock"] - int(round(time.time()*1000))
-        print("RECEIVED CLOCK SYNC!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
         setReadyForNewMsg(True)
+    elif response["function"]== "update_baord":
+        boardstate= response["args"]["boardstate"]
+        updateBoard(boardstate)
     elif response["function"] == "lock":
         #update board state this is not gui
         lockingSquare = gameBoard[x][y]
@@ -158,7 +160,6 @@ def process_response(response, x, y, mouse_pos):
         gameMap[x][y].lockSquare(p1) # lock the square player clicked on
         pygame.draw.circle(screen, p1.color, mouse_pos, radius) # render the drawing circle
         drawbg(gameMap,height,width,size,gap) # render the square in a color to indicate it is being drawn on (and locked) by a player of this color
-        setReadyForNewMsg(True)
         drawing = True
     # elif response["function"] == "new_player":
         # add player information 
@@ -172,13 +173,11 @@ def process_response(response, x, y, mouse_pos):
         # update board with other player locking 
         lockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"])
         drawSquare(gameMap, response["args"]["x"], response["args"]["y"])
-        setReadyForNewMsg(True)
        
     elif response["function"] == "unlock_square":
         unlockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"],response["args"]["conquered"])
         drawSquare(gameMap, response["args"]["x"], response["args"]["y"])
-        updateServerState(0)
-        setReadyForNewMsg(True)
+
 
     setReadyForNewMsg(True)
     return False
@@ -194,23 +193,29 @@ def checkForQuit():
 
 # returns if game should start (all players have connected)
 def process_pregame(payload):
-                notification = {
-                "function": "start",
-                "args": {
-                    "player_num": player.id,
-                    "player_addr": player.addr
-                }
-            }
 
     if payload["function"] == "start":
         # add all player information
         player_id = payload["args"]["player_id"]
+    
+        playerIsBackup = payload["args"]["player_isbackup"]
+
         for i, color in enumerate(ALL_COLORS):
             p = playerClass.gamePlayer(i+1, color[0], color[1], color[2])
             players.append(p)
             if i+1 == player_id:
                 global p1
                 p1 = p
+                if playerIsBackup == True:
+                    #current client is designated backup machine
+                    global isBackup
+                    isBackup= True
+                    global backupClient
+                    backupClient= p
+            elif playerIsBackup == True:
+                #current player is designated as backup but is not the current client machine
+                global backupClient
+                backupClient= p
         
         # start the game
         setReadyForNewMsg(True)
@@ -250,24 +255,30 @@ def showStartScreen():
         screen.blit(titleSurf, titleRect)
         pygame.display.update()
 
-def updateBoard(list):#synchs Client board with Server Board
+def updateBoard(list):#synchs Client board with Server Board after backup server has crashed
     boardstate=list
     gameBoard.updateState(boardstate)
+    #updating gui
     for row in range(gameBoard.row):
         for col in range(gameBoard.col):
-            playerName = gameBoard[row][col].belongsTo
-            #player= 
-            # if playerName = 0:
-            #pass
-            #else:
-            # pass
+            playerID = gameBoard[row][col].belongsTo
+            if playerID == 0:
+                pass
+            else:
+                curr_player=getPlayer(playerID)
+                gameMap[row][col].conquer(curr_player)
+
+def getPlayer(playerID):#get player object from player id
+    for player in players:
+        if player.id==playerID:
+            return player
 
 def updateServerState(sock):# send the server the current state of board
     #only happen when backup server is being created
     boardstate=gameBoard.getState()
     updateServerBoard_request = {
         "function": "updateBoard",
-        "player": p1.name,
+        "player": p1.id,
         "args": {
             "boardstate": boardstate,
         }
@@ -281,15 +292,15 @@ def updateServerState(sock):# send the server the current state of board
 def serverCrash():
     #assert: game is paused and server has crashed
     if isBackup: #client is backup server
-        #start server
+        #start backup server
         startNewServer()
-        #client connects to server
+        #client connected to backup server
         
-
-        #unpause client resume game
     else: #client is not backup server
         print("client is not backup server")
         # connect to new server
+        global HOST 
+        HOST= backupClient.addr
         sel.unregister(sock)
         socket.close(sock)
         start_connection((HOST, PORT))
@@ -343,6 +354,8 @@ def main():
                 if out == False
                     # Main server has crashed
                     serverCrash()
+                    updateServerState()
+
                 if out:
                     process_response(out, rect_x, rect_y, mouse_pos)
                     waiting_for_server = False
@@ -382,9 +395,9 @@ def main():
                             #send lock request lockSquareReq(i,j)
                             lock_request = {
                                 "function": "lock",
-                                "player": p1.name,
+                                "player": p1.id,
                                 "args": {
-				    "tstamp": int(round(time.time()*1000)) + time_diff,
+				                    "tstamp": int(round(time.time()*1000)) + time_diff,
                                     "x": rect_x,
                                     "y": rect_y
                                 }
@@ -422,7 +435,7 @@ def main():
                     #send request to unlock conquered square
                     unlock_request = {
                                 "function": "unlock_square",
-                                "player": p1.name,
+                                "player": p1.id,
                                 "args": {
 				    "tstamp": int(round(time.time()*1000)) + time_diff,
                                     "x": rect_x,
@@ -441,7 +454,7 @@ def main():
                     #send request to unlock unconquered square
                     unlock_request = {
                                 "function": "unlock_square",
-                                "player": p1.name,
+                                "player": p1.id,
                                 "args": {
 				    "tstamp": int(round(time.time()*1000)) + time_diff,
                                     "x": rect_x,

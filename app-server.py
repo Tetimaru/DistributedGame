@@ -32,7 +32,7 @@ ALL_COLORS = [ (255, 0, 0), # red
 
 sel = selectors.DefaultSelector() # to monitor multiple socket connections
 
-NUM_PLAYERS = 1
+NUM_PLAYERS = int(sys.argv(1))
 clients = [] # list of ConnectedPlayer objects
 clock_sync_frequency = 3 * 1000000 # 1,000,000 roughly equals to 1.5 seconds
 
@@ -135,19 +135,26 @@ def accept_wrapper(sock):
     clients.append(new_player)
     if len(clients) == NUM_PLAYERS:
         # we have enough players to start the game, notify clients
+        backupChosen=False
         for player in clients:
+            if player.addr != HOST and backupChosen==False:
+                isBackup=True
+                backupChosen=True
+            else:
+                backupChosen=False
             notification = {
                 "function": "start",
                 "args": {
                     "player_num": player.id,
                     "player_color": player.color,
-                    "player_addr": player.addr
+                    "player_addr": player.addr,
+                    "player_isbackup":isBackup
                 }
             }
 
             new_messageOut(player.sock, notification)
             return True
-    
+
 
 def process_request(sock, request):
     print("received", request)
@@ -175,7 +182,8 @@ def process_request(sock, request):
 
     #unlock request    
     elif request["function"] == "unlock_square":
-        conquered= unlockSquare(sock,request["player"],request["args"]["x"],request["args"]["y"],request["args"]["conquered"])        #send messages to all other clients
+        conquered= unlockSquare(sock,request["player"],request["args"]["x"],request["args"]["y"],request["args"]["conquered"])      
+        #send messages to all other clients
         other_socks = [player.sock for player in clients if player.sock != sock]
         for socket in other_socks:
             response = {
@@ -189,6 +197,24 @@ def process_request(sock, request):
             }
             new_messageOut(socket, response)
         setReadyForNewMsg(True)
+    elif request["function"]== "updateBoard":#called only when main server is down and backup client starts backup server
+        boardstate = request["args"]["boardstate"]
+        updateBoard(boardstate)
+        #send messages to all other clients
+        other_socks = [player.sock for player in clients if player.sock != sock]
+        for socket in other_socks:
+            boardstate=gameBoard.getState()
+            response = {
+                "function": "updateBoard",
+                "args": {
+                    "boardstate": boardstate
+                }
+            }
+            new_messageOut(socket, response)
+        setReadyForNewMsg(True)
+
+
+
 
 def sendUpdateToClients(req_func):
     pass
@@ -203,16 +229,7 @@ def start_listening():
     lsock.setblocking(False)
     sel.register(lsock, selectors.EVENT_READ, data=None)
 
-'''----------TESTING----------'''
-# print("creating game board")
-# print(gameBoard)
-# s= gameBoard[2][1]
-# print (s.belongsTo)
-# s.lockPlayer = "test"
-# print (gameBoard[2][1].belongsTo)
-# print(gameBoard.row)
-# print(gameBoard.col)
-'''----------TESTING----------'''
+
 
 def new_messageIn(sock):
     message = libserver.MessageIn(sel, sock, (HOST, PORT))
@@ -221,6 +238,10 @@ def new_messageIn(sock):
 def new_messageOut(sock, request):
     message = libserver.MessageOut(sel, sock, (HOST, PORT), request)
     sel.modify(sock, selectors.EVENT_WRITE, data=message)
+
+def updateBoard(list):#synchs Client board with Server Board after backup server has crashed
+    boardstate=list
+    gameBoard.updateState(boardstate)
     
 def main():
     start_listening()
