@@ -35,11 +35,20 @@ PORT = 65432
 
 # pygame 
 gameMap = [[None for i in range(height)] for j in range(width)] # initialize matrix for storing game grid data
-players = []
+
 
 GREEN = (0, 255, 0)
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
+
+# players (clients) have an ID between 1-4
+players = []
+# the colors used by the players 
+# player ID n uses color ALL_COLORS[n-1]
+ALL_COLORS = [ (255, 0, 0), # red
+               (0, 255, 0), # green
+               (0, 0, 255), # blue
+               (255, 255, 0) ] # yellow 
 
 # if len(sys.argv) < 3:
     # print("usage: ./app-server.py <host> <port>")
@@ -162,21 +171,15 @@ def process_response(response, x, y, mouse_pos):
     elif response["function"] == "lock_square":
         # update board with other player locking 
         lockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"])
-        screen.fill((0,0,0,255)) # destroy everything
-        background.fill((0,0,0,255))
-        draw(gameMap,height,width,size,gap) # just draw everything again for the heck of it
-        drawbg(gameMap,height,width,size,gap) # also helps remove leftover brushstrokes
+        drawSquare(gameMap, response["args"]["x"], response["args"]["y"])
         setReadyForNewMsg(True)
        
     elif response["function"] == "unlock_square":
         unlockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"],response["args"]["conquered"])
+        drawSquare(gameMap, response["args"]["x"], response["args"]["y"])
         updateServerState(0)
         setReadyForNewMsg(True)
-        screen.fill((0,0,0,255)) # destroy everything
-        background.fill((0,0,0,255))
-        draw(gameMap,height,width,size,gap) # just draw everything again for the heck of it
-        drawbg(gameMap,height,width,size,gap) # also helps remove leftover brushstrokes
-        
+
     setReadyForNewMsg(True)
     return False
 
@@ -191,13 +194,21 @@ def checkForQuit():
 
 # returns if game should start (all players have connected)
 def process_pregame(payload):
+                notification = {
+                "function": "start",
+                "args": {
+                    "player_num": player.id,
+                    "player_addr": player.addr
+                }
+            }
+
     if payload["function"] == "start":
         # add all player information
-        player_id = payload["args"]["player_num"]
-        for i, color in enumerate(payload["args"]["player_colors"]):
-            p = playerClass.gamePlayer(player_id, color[0], color[1], color[2])
+        player_id = payload["args"]["player_id"]
+        for i, color in enumerate(ALL_COLORS):
+            p = playerClass.gamePlayer(i+1, color[0], color[1], color[2])
             players.append(p)
-            if i == player_id:
+            if i+1 == player_id:
                 global p1
                 p1 = p
         
@@ -329,8 +340,8 @@ def main():
                 # read the data from the socket, and return it
                 out = messageIn.read()
                 # if data, process it and create a response 
-                if out == False:
-                    #Main server has crashed
+                if out == False
+                    # Main server has crashed
                     serverCrash()
                 if out:
                     process_response(out, rect_x, rect_y, mouse_pos)
