@@ -49,7 +49,7 @@ def clockSync():
     }
     for sock in all_socks:
         new_messageOut(sock, update)
-	
+    return True	
 
 def setReadyForNewMsg(isReady):
     global rdy_for_new_msg
@@ -215,17 +215,14 @@ def main():
     timecounter = 0
     # socket event loop
     while True:
-        if timecounter==4:
-            clockSync()
-            print('synching clocks')
-            timecounter=0
-        events = sel.select(timeout=None)
+        events = sel.select(timeout=0)
         for key, mask in events:
             if key.data is None: # listen socket
                 accept_wrapper(key.fileobj) # new client connection
             else: # existing client socket
                 if mask & selectors.EVENT_READ:
                     # *IF* we are completely done a previous read/write, create a new message class to:
+                    print(rdy_for_new_msg)
                     if rdy_for_new_msg:
                         new_messageIn(key.fileobj)
                         setReadyForNewMsg(False)
@@ -244,8 +241,12 @@ def main():
                     # write the data to the socket
                     messageOut = key.data
                     out = messageOut.write()
-        timecounter+=1
-        print(str(timecounter))
+                if timecounter==1000000:
+                    clockSync()
+                    print('synching clocks')
+                    timecounter=0
+                timecounter+=1
+#        print(str(timecounter))
 if __name__ == "__main__":
     main()
 

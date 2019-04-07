@@ -118,7 +118,7 @@ def process_response(response, x, y, mouse_pos):
     if response["function"] == "clock_sync":
         time_diff = response["args"]["server_clock"] - int(round(time.time()*1000))
         print("RECEIVED CLOCK SYNC!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
-        setReadyforNewMsg(True)
+        setReadyForNewMsg(True)
         return time_diff
     elif response["function"] == "lock":
         #update board state this is not gui
@@ -177,7 +177,7 @@ def process_pregame(payload):
         setReadyForNewMsg(True)
         return True
     else:
-        print("something went wrong")
+        print("client startup not receiving proper startup message from server")
         setReadyForNewMsg(True)
         return False
     
