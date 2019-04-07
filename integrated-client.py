@@ -15,7 +15,9 @@ from guiConfigAndFuncs import *
 gameBoard= Board.createBoard(8,8)
 player = None #get player before game starts from server
 requestedSquare= None
+global time_diff
 time_diff = 0
+
 
 
 # should get host and port from the command line
@@ -119,7 +121,6 @@ def process_response(response, x, y, mouse_pos):
         time_diff = response["args"]["server_clock"] - int(round(time.time()*1000))
         print("RECEIVED CLOCK SYNC!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
         setReadyForNewMsg(True)
-        return time_diff
     elif response["function"] == "lock":
         #update board state this is not gui
         lockingSquare = gameBoard[x][y]
@@ -127,11 +128,10 @@ def process_response(response, x, y, mouse_pos):
         lockingSquare.belongsTo = p1
         # start drawing                               
         gameMap[x][y].lockSquare(p1) # lock the square player clicked on
-        draw_on = True # player is now drawing
         pygame.draw.circle(screen, p1.color, mouse_pos, radius) # render the drawing circle
         drawbg(gameMap,height,width,size,gap) # render the square in a color to indicate it is being drawn on (and locked) by a player of this color
         setReadyForNewMsg(True)
-        return draw_on
+        drawing = True
     # elif response["function"] == "new_player":
         # add player information 
         # color = response["args"]["color"]
@@ -143,12 +143,19 @@ def process_response(response, x, y, mouse_pos):
     elif response["function"] == "lock_square":
         # update board with other player locking 
         lockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"])
+        screen.fill((0,0,0,255)) # destroy everything
+        background.fill((0,0,0,255))
+        draw(gameMap,height,width,size,gap) # just draw everything again for the heck of it
+        drawbg(gameMap,height,width,size,gap) # also helps remove leftover brushstrokes
         setReadyForNewMsg(True)
        
     elif response["function"] == "unlock_square":
         unlockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"],response["args"]["conquered"])
         setReadyForNewMsg(True)
-
+        screen.fill((0,0,0,255)) # destroy everything
+        background.fill((0,0,0,255))
+        draw(gameMap,height,width,size,gap) # just draw everything again for the heck of it
+        drawbg(gameMap,height,width,size,gap) # also helps remove leftover brushstrokes
         
     setReadyForNewMsg(True)
     return False
@@ -257,7 +264,7 @@ def main():
                 out = messageIn.read()
                 # if data, process it and create a response 
                 if out:
-                    draw_on = process_response(out, rect_x, rect_y, mouse_pos)
+                    process_response(out, rect_x, rect_y, mouse_pos)
                     waiting_for_server = False
             if mask & selectors.EVENT_WRITE:
                 # We should only be listening to write events if a request has been created
@@ -281,6 +288,7 @@ def main():
 
             if e.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = e.pos # get position of mouseclick event
+                draw_on = True
                 for i in range(height):
                     for j in range(width):
                         if gameMap[i][j].squarePos.collidepoint(mouse_pos): # find which square was clicked
@@ -328,7 +336,7 @@ def main():
                     for y in range(top_border, top_border+size):
                         if pxarray[x,y]!=screen.map_rgb(p1.color): # check color of all pixels in square
                             white_pixel += 1
-                        else: # if not player's color, then count it yas white pixel, else count it as player pixel
+                        else: # if not player's color, then count it as white pixel, else count it as player pixel
                             player_pixel +=1
                 if (player_pixel/square_pixel >= conquerpercent): # player conquered square
                     #send request to unlock conquered square
