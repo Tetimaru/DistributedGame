@@ -135,6 +135,7 @@ def accept_wrapper(sock):
                 }
             }
             new_messageOut(soc, notification)
+        return True
     
 
 def process_request(sock, request):
@@ -213,12 +214,15 @@ def new_messageOut(sock, request):
 def main():
     start_listening()
     timecounter = 0
+    sync_ok = False
     # socket event loop
     while True:
         events = sel.select(timeout=0)
         for key, mask in events:
             if key.data is None: # listen socket
-                accept_wrapper(key.fileobj) # new client connection
+                start_flag = accept_wrapper(key.fileobj) # new client connection
+                if start_flag == True:
+                    sync_ok = True
             else: # existing client socket
                 if mask & selectors.EVENT_READ:
                     # *IF* we are completely done a previous read/write, create a new message class to:
@@ -241,11 +245,11 @@ def main():
                     # write the data to the socket
                     messageOut = key.data
                     out = messageOut.write()
-                if timecounter==1000000:
-                    clockSync()
-                    print('synching clocks')
-                    timecounter=0
-                timecounter+=1
+        if timecounter%3000000==0 and sync_ok==True:
+            clockSync()
+            print('synching clocks')
+            timecounter=0
+        timecounter+=1
 #        print(str(timecounter))
 if __name__ == "__main__":
     main()

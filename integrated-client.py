@@ -268,7 +268,7 @@ def main():
         
         #print("Between socket and pygame event loop")
         if not waiting_for_server:
-            e = pygame.event.wait()
+            e = pygame.event.poll()
             if e.type == pygame.KEYDOWN: 
                 if e.key == pygame.K_ESCAPE: # press esc to exit game
                     raise StopIteration
