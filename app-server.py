@@ -1,3 +1,6 @@
+import os
+import time
+import urllib.request
 import socket
 import selectors
 import sys
@@ -8,10 +11,11 @@ from board import Board
 
 #global variables
 gameBoard = Board.createBoard(8,8)
-#what is the size of the board?????
 
 # should get host and port from the command line
-HOST = '127.0.0.1'
+
+HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8')
+# HOST = '127.0.0.1'
 PORT = 65432
 
 ALL_COLORS = [ (255, 0, 0), # red
@@ -27,8 +31,10 @@ ALL_COLORS = [ (255, 0, 0), # red
 # port = sys.argv[2]
 
 sel = selectors.DefaultSelector() # to monitor multiple socket connections
+
 NUM_PLAYERS = 1
 clients = [] # list of ConnectedPlayer objects
+clock_sync_frequency = 3 * 1000000 # 1,000,000 roughly equals to 1.5 seconds
 
 # global flags
 rdy_for_new_msg = True # Flag to determine if the previous read/write message has completed processing
@@ -40,6 +46,18 @@ class ConnectedPlayer(object):
         self.color = color
         self.addr = addr
         self.id = id 
+
+def clockSync():
+    all_socks = [socket for socket in client_socks]
+    update = {
+	"function": "clock_sync",
+	"args": {
+	    "server_clock": int(round(time.time()*1000))
+	}
+    }
+    for sock in all_socks:
+        new_messageOut(sock, update)
+    return True	
 
 def setReadyForNewMsg(isReady):
     global rdy_for_new_msg
@@ -126,7 +144,9 @@ def accept_wrapper(sock):
                     "player_addr": player.addr
                 }
             }
+
             new_messageOut(player.sock, notification)
+            return True
     
 
 def process_request(sock, request):
@@ -203,16 +223,21 @@ def new_messageOut(sock, request):
     sel.modify(sock, selectors.EVENT_WRITE, data=message)
     
 def main():
-    start_listening()   
+    start_listening()
+    timecounter = 0
+    sync_ok = False
     # socket event loop
     while True:
-        events = sel.select(timeout=None)
+        events = sel.select(timeout=0)
         for key, mask in events:
             if key.data is None: # listen socket
-                accept_wrapper(key.fileobj) # new client connection
+                start_flag = accept_wrapper(key.fileobj) # new client connection
+                if start_flag == True:
+                    sync_ok = True
             else: # existing client socket
                 if mask & selectors.EVENT_READ:
                     # *IF* we are completely done a previous read/write, create a new message class to:
+                    print(rdy_for_new_msg)
                     if rdy_for_new_msg:
                         new_messageIn(key.fileobj)
                         setReadyForNewMsg(False)
@@ -231,8 +256,12 @@ def main():
                     # write the data to the socket
                     messageOut = key.data
                     out = messageOut.write()
-
-    
+        if timecounter%clock_sync_frequency==0 and sync_ok==True:
+            clockSync()
+            print('synching clocks')
+            timecounter=0
+        timecounter+=1
+#        print(str(timecounter))
 if __name__ == "__main__":
     main()
 
