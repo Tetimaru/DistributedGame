@@ -24,7 +24,7 @@ backupClient= None
 
 
 # should get host and port from the command line
-HOST = '127.0.0.1'
+HOST = '142.58.15.224'
 
 # addrArg = input("input IP address of game Host: ")
 # if (addrArg == ""):
@@ -82,9 +82,11 @@ class playerAssociation(object):
 
 def startNewServer():
     # start a new server process
-    args = ['python', 'app-server.py','3']
+    args = ['python', 'app-server.py','1']
     p = subprocess.Popen(args)
     # connect to new server
+    global HOST 
+    HOST= backupClient.addr
     sel.unregister(sock)
     socket.close(sock)
     start_connection((HOST, PORT))
@@ -187,6 +189,7 @@ def checkForQuit():
     
 # returns if game should start (all players have connected)
 def process_pregame(payload):
+    global backupClient
     if payload["function"] == "start":
         # add all player information
         player_id = payload["args"]["player_id"]
@@ -203,11 +206,9 @@ def process_pregame(payload):
                     #current client is designated backup machine
                     global isBackup
                     isBackup= True
-                    global backupClient
                     backupClient= p
             elif playerIsBackup == True:
                 #current player is designated as backup but is not the current client machine
-                global backupClient
                 backupClient= p
         
         # start the game
@@ -294,6 +295,7 @@ def serverCrash():
         # connect to new server
         global HOST 
         HOST= backupClient.addr
+        print("BACKUP ADDR " + str(HOST))
         sel.unregister(sock)
         socket.close(sock)
         start_connection((HOST, PORT))
