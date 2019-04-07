@@ -23,7 +23,7 @@ time_diff = 0
 
 
 # should get host and port from the command line
-HOST = '142.58.15.59'
+HOST = '127.0.0.1'
 
 # addrArg = input("input IP address of game Host: ")
 # if (addrArg == ""):
@@ -116,11 +116,11 @@ def start_connection(addr):
 
 #server tell client to lock square xy for player x
 def lockSquare(player,x,y):
-    p=players[player]
+    p=players[player-1]
     lockingSquare = gameBoard[x][y]
     lockingSquare.lock = True
     lockingSquare.belongsTo = p
-    gameMap[x][y].lockSquare(players[player])
+    gameMap[x][y].lockSquare(players[player-1])
     drawbg(gameMap,height,width,size,gap)
 
 
@@ -133,14 +133,14 @@ def unlockSquare(player,x,y,conquered):
         unlockingSquare.conquered = True
         unlockingSquare.belongsTo = player
         print("I've conquered square[%d][%d]",x,y)
-        gameMap[x][y].conquer(players[player])
+        gameMap[x][y].conquer(players[player-1])
 
     else:
         #suqare is not conquered by player
         unlockingSquare.conquered = False
         unlockingSquare.belongsTo = None
         print("square [%d][%d] is unconquered",x,y)
-        gameMap[x][y].revert(players[player])
+        gameMap[x][y].revert(players[player-1])
   
 
 def setReadyForNewMsg(isReady):
@@ -179,53 +179,38 @@ def process_response(response, x, y, mouse_pos):
         drawbg(gameMap,height,width,size,gap) # render the square in a color to indicate it is being drawn on (and locked) by a player of this color
         setReadyForNewMsg(True)
         drawing = True
-    # elif response["function"] == "new_player":
-        # add player information 
-        # color = response["args"]["color"]
-        # player = playerClass.gamePlayer("chuck", color[0], color[1], color[2])
-        # if len(players) < 1:
-            # global p1
-            # p1 = player
-        # players.append(player)
     elif response["function"] == "lock_square":
         # update board with other player locking 
         lockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"])
         drawSquare(gameMap, response["args"]["x"], response["args"]["y"])
-        setReadyForNewMsg(True)
-       
+        setReadyForNewMsg(True)      
     elif response["function"] == "unlock_square":
         unlockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"],response["args"]["conquered"])
         drawSquare(gameMap, response["args"]["x"], response["args"]["y"])
-        updateServerState(0)
         setReadyForNewMsg(True)
 
     setReadyForNewMsg(True)
     return False
 
+# close the client
 def terminate():
     pygame.quit()
     sys.exit()
-    
+
+# check for quit (click X at top right) events and terminate if so
 def checkForQuit():
     for event in pygame.event.get(QUIT):
        terminate()
     
-
 # returns if game should start (all players have connected)
 def process_pregame(payload):
-                notification = {
-                "function": "start",
-                "args": {
-                    "player_num": player.id,
-                    "player_addr": player.addr
-                }
-            }
-
     if payload["function"] == "start":
         # add all player information
         player_id = payload["args"]["player_id"]
-        for i, color in enumerate(ALL_COLORS):
-            p = playerClass.gamePlayer(i+1, color[0], color[1], color[2])
+        addresses = payload["args"]["player_addrs"]
+        print(addresses)
+        for i, color in enumerate(ALL_COLORS[:2]):
+            p = playerClass.gamePlayer(i+1, color, addresses[i])
             players.append(p)
             if i+1 == player_id:
                 global p1
@@ -276,7 +261,7 @@ def updateServerState(sock):
     print("In update server")
     updateServerBoard_request = {
         "function": "updateBoard",
-        "player": p1.name,
+        "player": p1.id,
         "args": {
             "boardstate": boardstate,
         }
@@ -337,7 +322,6 @@ def main():
     draw_on = False
     mouse_pos = None
     waiting_for_server = False
-    #p1 = playerClass.gamePlayer("chuck", 255, 255, 0) # the current player
 
     firstdraw(gameMap,height,width,size,gap) # render game grid
     pygame.display.flip() # update the screen to reflect changes
@@ -356,8 +340,9 @@ def main():
                 # read the data from the socket, and return it
                 out = messageIn.read()
                 # if data, process it and create a response 
-                if out == False
+                if out == False:
                     # Main server has crashed
+                    return
                     serverCrash()
                 if out:
                     process_response(out, rect_x, rect_y, mouse_pos)
@@ -369,12 +354,13 @@ def main():
                 doneWriting = messageOut.write()
                 setReadyForNewMsg(doneWriting)
         
+        checkForQuit()
         #print("Between socket and pygame event loop")
         if not waiting_for_server:
             e = pygame.event.poll()
             if e.type == pygame.KEYDOWN: 
                 if e.key == pygame.K_ESCAPE: # press esc to exit game
-                    raise StopIteration
+                    terminate()
                 if e.key == pygame.K_SPACE: # press space to clear board (for debug use only)
                     for i in range(height):
                         for j in range(width):
@@ -398,9 +384,9 @@ def main():
                             #send lock request lockSquareReq(i,j)
                             lock_request = {
                                 "function": "lock",
-                                "player": p1.name,
+                                "player": p1.id,
                                 "args": {
-				    "tstamp": int(round(time.time()*1000)) + time_diff,
+				                    "tstamp": int(round(time.time()*1000)) + time_diff,
                                     "x": rect_x,
                                     "y": rect_y
                                 }
@@ -438,7 +424,7 @@ def main():
                     #send request to unlock conquered square
                     unlock_request = {
                                 "function": "unlock_square",
-                                "player": p1.name,
+                                "player": p1.id,
                                 "args": {
 				    "tstamp": int(round(time.time()*1000)) + time_diff,
                                     "x": rect_x,
@@ -457,7 +443,7 @@ def main():
                     #send request to unlock unconquered square
                     unlock_request = {
                                 "function": "unlock_square",
-                                "player": p1.name,
+                                "player": p1.id,
                                 "args": {
 				    "tstamp": int(round(time.time()*1000)) + time_diff,
                                     "x": rect_x,
@@ -473,9 +459,6 @@ def main():
                     #wait for server reply
                     waiting_for_server = True
                     
-                
-                    
-
                 screen.fill((0,0,0,255)) # destroy everything
                 background.fill((0,0,0,255))
                 draw(gameMap,height,width,size,gap) # just draw everything again for the heck of it

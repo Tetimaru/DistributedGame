@@ -63,7 +63,7 @@ class Board(object):
         self.col = col
         
     def __getitem__(self, idx):
-        print(self.rows[idx])
+        #print(self.rows[idx])
         return self.rows[idx]
 
     def __setitem__(self, idx, item):
@@ -162,7 +162,7 @@ class Board(object):
         l=0
         for i in range(self.row):
             for j in range(self.col):
-                print(list[i+j])
+                #print(list[i+j])
                 self[i][j].belongsTo = list[l]
                 l+=1
         return self
