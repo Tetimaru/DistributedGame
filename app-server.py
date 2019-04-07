@@ -32,7 +32,7 @@ ALL_COLORS = [ (255, 0, 0), # red
 
 sel = selectors.DefaultSelector() # to monitor multiple socket connections
 
-NUM_PLAYERS = 2
+NUM_PLAYERS = int(sys.argv[1])
 clients = [] # list of ConnectedPlayer objects
 clock_sync_frequency = 3 * 1000000 # 1,000,000 roughly equals to 1.5 seconds
 
@@ -259,12 +259,12 @@ def main():
                     # write the data to the socket
                     messageOut = key.data
                     out = messageOut.write()
-        # if timecounter%clock_sync_frequency==0 and sync_ok==True:
-        #     clockSync()
-        #     print('synching clocks')
-        #     timecounter=0
-        # timecounter+=1
-#        print(str(timecounter))
+        if timecounter%clock_sync_frequency==0 and sync_ok==True:
+            clockSync()
+            print('synching clocks')
+            timecounter=0
+        timecounter+=1
+        #print(str(timecounter))
 if __name__ == "__main__":
     main()
 
