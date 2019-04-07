@@ -44,4 +44,7 @@ def drawbg(gameMap, height, width, size, gap): # draw bg layer of game grid (for
     for y in range(height):
         for x in range(width):
             rect = pygame.Rect((x*size)+(x*gap), (y*size)+(y*gap), size, size)
-            pygame.draw.rect(background, gameMap[x][y].squareColor, gameMap[x][y].squarePos)            
+            pygame.draw.rect(background, gameMap[x][y].squareColor, gameMap[x][y].squarePos)
+
+def drawSquare(gameMap, x, y):
+    pygame.draw.rect(screen, gameMap[x][y].squareColor, gameMap[x][y].squarePos)

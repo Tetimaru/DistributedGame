@@ -190,21 +190,15 @@ def process_response(response, x, y, mouse_pos):
     elif response["function"] == "lock_square":
         # update board with other player locking 
         lockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"])
-        screen.fill((0,0,0,255)) # destroy everything
-        background.fill((0,0,0,255))
-        draw(gameMap,height,width,size,gap) # just draw everything again for the heck of it
-        drawbg(gameMap,height,width,size,gap) # also helps remove leftover brushstrokes
+        drawSquare(gameMap, response["args"]["x"], response["args"]["y"])
         setReadyForNewMsg(True)
        
     elif response["function"] == "unlock_square":
         unlockSquare(response["args"]["player"],response["args"]["x"],response["args"]["y"],response["args"]["conquered"])
+        drawSquare(gameMap, response["args"]["x"], response["args"]["y"])
         updateServerState(0)
         setReadyForNewMsg(True)
-        screen.fill((0,0,0,255)) # destroy everything
-        background.fill((0,0,0,255))
-        draw(gameMap,height,width,size,gap) # just draw everything again for the heck of it
-        drawbg(gameMap,height,width,size,gap) # also helps remove leftover brushstrokes
-        
+
     setReadyForNewMsg(True)
     return False
 
