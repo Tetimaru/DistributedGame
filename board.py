@@ -9,14 +9,14 @@ __version__ = "0.3"
 class Square:
 	# Game Square variables
 	lock=False
-	belongsTo=None # player that locks this square. can be changed later to be the player's number or whatever.
+	belongsTo=0 # player that locks this square. can be changed later to be the player's number or whatever.
 	conquered=False #  # same as above. right now the entire player instance is passed into here
 
 	
 	def __init__(self):
 		self.lock = False
 		self.conquered=False
-		self.belongsTo = None
+		self.belongsTo = 0
 
 
 	def lockSquare(self, lockPlayer):
@@ -63,7 +63,6 @@ class Board(object):
         self.col = col
         
     def __getitem__(self, idx):
-        print("get item")
         print(self.rows[idx])
         return self.rows[idx]
 
@@ -95,7 +94,6 @@ class Board(object):
     def save(self, filename):
         open(filename, 'w').write(str(self))
         
-   
         
     @classmethod
     def makeRandom(cls, m, n, low=0, high=10):
@@ -158,11 +156,15 @@ class Board(object):
         s=' '.join([' '.join([str(item.belongsTo) for item in row]) for row in self.rows])
         return s.split(' ')
     
+
     def updateState(self,list):
         #defualt board is 8x8
-        for i in range(sel.row):
+        l=0
+        for i in range(self.row):
             for j in range(self.col):
-                self[i][j].belongsTo = list[i+j]
+                print(list[i+j])
+                self[i][j].belongsTo = list[l]
+                l+=1
         return self
   
 

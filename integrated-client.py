@@ -12,10 +12,11 @@ from guiConfigAndFuncs import *
 gameBoard= Board.createBoard(8,8)
 player = None #get player before game starts from server
 requestedSquare= None
+isBackup=False
 
 
 # should get host and port from the command line
-HOST = '127.0.0.1'
+HOST = '142.58.15.59'
 PORT = 65432
 
 # pygame 
@@ -196,10 +197,51 @@ def showStartScreen():
         screen.fill(BLACK)
         screen.blit(titleSurf, titleRect)
         pygame.display.update()
+
+
+def updateServerState(sock):
+    # send the server the current state of board
+    boardstate=gameBoard.getState()
+    print("In update server")
+    updateServerBoard_request = {
+        "function": "updateBoard",
+        "player": p1.name,
+        "args": {
+            "boardstate": boardstate,
+        }
+    }
+    print(rdy_for_new_msg)
+    while not create_request(updateServerBoard_request):
+        continue
+    print("created request")
+    #wait for server reply
+    waiting_for_server = True
+
+def serverCrash():
+    #assert: game is paused and server has crashed
+    if isBackup: #client is backup server
+        pass#remove
+        #start server
+        startNewServer()
+        #client connects to server
+
+        #unpause client resume game
+    else: #client is not backup server
+        pass
+        #try connecting to new server
+        #upon successful connection unpause game
     
+def startNewServer():
+    # start a new server process
+    args = ['python', 'app-server.py']
+    p = subprocess.Popen(args)
+    # connect to new server
+    sel.unregister(sock)
+    socket.close(sock)
+    start_connection((HOST, PORT))
+
 def main():
     global TITLEFONT, p1
-    
     pygame.init()
     TITLEFONT = pygame.font.SysFont('batangbatangchegungsuhgungsuhche', 36)
     p1 = None
@@ -241,6 +283,17 @@ def main():
                 # read the data from the socket, and return it
                 out = messageIn.read()
                 # if data, process it and create a response 
+                #if out == False
+                    #Main server has crashed
+                    #pause game
+                    while not gamePaused():
+                        continue
+                    print("created unlock request for unconquered square")
+                    #wait for server reply
+                    waiting_for_server = True
+                    #run process for starting backup server or connecting to it
+                    #pausegame()
+                    #serverCrash()
                 if out:
                     draw_on = process_response(out, rect_x, rect_y, mouse_pos)
                     waiting_for_server = False
@@ -276,7 +329,7 @@ def main():
                             #do client side check to see if the square is locked
                             if gameMap[i][j].lock:
                                 pass #not sure if this works test it!
-                            #123 send lock request lockSquareReq(i,j)
+                            #send lock request lockSquareReq(i,j)
                             lock_request = {
                                 "function": "lock",
                                 "player": p1.name,
@@ -289,9 +342,9 @@ def main():
                             while not create_request(lock_request):
                                 continue
                             print("created request")
-                            #123 wait for server reply
+                            #wait for server reply
                             waiting_for_server = True
-                            #123 if lock then call lockSquare(player,i,j) 
+                            
 
             if e.type == pygame.MOUSEMOTION: # when mouse is moving
                 if draw_on: # when mouse is moving AND mouse button is held
