@@ -15,7 +15,7 @@ gameBoard = Board.createBoard(8,8)
 # should get host and port from the command line
 
 #HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8')
-HOST = '127.0.0.1'
+HOST = '142.58.15.120'
 PORT = 65432
 
 ALL_COLORS = [ (255, 0, 0), # red
@@ -146,7 +146,7 @@ def accept_wrapper(sock):
             notification = {
                 "function": "start",
                 "args": {
-                    "player_num": player.id,
+                    "player_id": player.id,
                     "player_addrs": [client.addr for client in clients],
                     "player_isbackup": isBackup
                 }
