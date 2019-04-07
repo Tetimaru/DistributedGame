@@ -19,6 +19,7 @@ requestedSquare= None
 isBackup=False
 global time_diff
 time_diff = 0
+backupClient= None
 
 
 
@@ -76,32 +77,13 @@ if len(sys.argv) > 1:
     print("sending request")
 
 class playerAssociation(object):
-    def __init__(color, addr):
+    def __init__(self,color, addr):
         self.color = color 
         self.addr = addr  
 
-def updateServerState(sock):
-    # send the server the current state of board
-    board = [[0 for i in range(height)] for j in range(width)]
-    print("In update server")
-    # if this client is backup server, it should receive 
-    for i in range(height):
-        for j in range(width):
-            owner = gameMap[i][j].belongsTo
-            board[i][j] = playerAssociation(owner.color, owner.addr)
-    print(board)
-    terminate()
-    request = {
-        "function": "update_board",
-        "board": board 
-    }
-
-    while not create_request(lock_request):
-        continue
-
 def startNewServer():
     # start a new server process
-    args = ['python', 'app-server.py']
+    args = ['python', 'app-server.py','3']
     p = subprocess.Popen(args)
     # connect to new server
     sel.unregister(sock)
@@ -169,6 +151,9 @@ def process_response(response, x, y, mouse_pos):
         time_diff = response["args"]["server_clock"] - int(round(time.time()*1000))
         print("Received clock sync; time diff between client and server is "+str(time_diff)+"\n")
         setReadyForNewMsg(True)
+    elif response["function"]== "update_baord":
+        boardstate= response["args"]["boardstate"]
+        updateBoard(boardstate)
     elif response["function"] == "lock":
         #update board state this is not gui
         lockingSquare = gameBoard[x][y]
@@ -178,7 +163,6 @@ def process_response(response, x, y, mouse_pos):
         gameMap[x][y].lockSquare(p1) # lock the square player clicked on
         pygame.draw.circle(screen, p1.color, mouse_pos, radius) # render the drawing circle
         drawbg(gameMap,height,width,size,gap) # render the square in a color to indicate it is being drawn on (and locked) by a player of this color
-        setReadyForNewMsg(True)
         drawing = True
     elif response["function"] == "lock_square":
         # update board with other player locking 
@@ -209,6 +193,7 @@ def process_pregame(payload):
         # add all player information
         player_id = payload["args"]["player_id"]
         addresses = payload["args"]["player_addrs"]
+        playerIsBackup = payload["args"]["player_isbackup"]
         print(addresses)
         for i, color in enumerate(ALL_COLORS[:2]):
             p = playerClass.gamePlayer(i+1, color, addresses[i])
@@ -216,6 +201,16 @@ def process_pregame(payload):
             if i+1 == player_id:
                 global p1
                 p1 = p
+                if playerIsBackup == True:
+                    #current client is designated backup machine
+                    global isBackup
+                    isBackup= True
+                    global backupClient
+                    backupClient= p
+            elif playerIsBackup == True:
+                #current player is designated as backup but is not the current client machine
+                global backupClient
+                backupClient= p
         
         # start the game
         setReadyForNewMsg(True)
@@ -255,11 +250,27 @@ def showStartScreen():
         screen.blit(titleSurf, titleRect)
         pygame.display.update()
 
+def updateBoard(list):#synchs Client board with Server Board after backup server has crashed
+    boardstate=list
+    gameBoard.updateState(boardstate)
+    #updating gui
+    for row in range(gameBoard.row):
+        for col in range(gameBoard.col):
+            playerID = gameBoard[row][col].belongsTo
+            if playerID == 0:
+                pass
+            else:
+                curr_player=getPlayer(playerID)
+                gameMap[row][col].conquer(curr_player)
 
-def updateServerState(sock):
-    # send the server the current state of board
+def getPlayer(playerID):#get player object from player id
+    for player in players:
+        if player.id==playerID:
+            return player
+
+def updateServerState():# send the server the current state of board
+    #only happen when backup server is being created
     boardstate=gameBoard.getState()
-    print("In update server")
     updateServerBoard_request = {
         "function": "updateBoard",
         "player": p1.id,
@@ -271,31 +282,24 @@ def updateServerState(sock):
     while not create_request(updateServerBoard_request):
         continue
     print("created request")
-    #wait for server reply
     waiting_for_server = True
 
 def serverCrash():
     #assert: game is paused and server has crashed
     if isBackup: #client is backup server
-        pass#remove
-        #start server
+        #start backup server
         startNewServer()
-        #client connects to server
-
-        #unpause client resume game
+        #client connected to backup server
+        
     else: #client is not backup server
-        pass
-        #try connecting to new server
-        #upon successful connection unpause game
-    
-def startNewServer():
-    # start a new server process
-    args = ['python', 'app-server.py']
-    p = subprocess.Popen(args)
-    # connect to new server
-    sel.unregister(sock)
-    socket.close(sock)
-    start_connection((HOST, PORT))
+        print("client is not backup server")
+        # connect to new server
+        global HOST 
+        HOST= backupClient.addr
+        sel.unregister(sock)
+        socket.close(sock)
+        start_connection((HOST, PORT))
+      
 
 def main():
     global TITLEFONT, p1
@@ -343,8 +347,10 @@ def main():
                 # if data, process it and create a response 
                 if out == False:
                     # Main server has crashed
-                    return
                     serverCrash()
+                    updateServerState()
+                    return
+
                 if out:
                     process_response(out, rect_x, rect_y, mouse_pos)
                     waiting_for_server = False
