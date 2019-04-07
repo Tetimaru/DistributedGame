@@ -1,13 +1,12 @@
-import socket
+LOCK_MULTIPLIER = 0.4 # what percent binary value of color is lockColor
 
+# stores the information associated with a particular player
 class gamePlayer:
+	def __init__(self, id, color, addr):
+		self.id = id
+		self.color = color # (r,g,b)
+		self.lockColor = (color[0] * LOCK_MULTIPLIER,
+						  color[1] * LOCK_MULTIPLIER,
+						  color[2] * LOCK_MULTIPLIER)
+		self.addr = addr
 
-	name=-1
-	color=(255,255,255)
-	lockColor=(255,255,255)
-
-	def __init__(self, name, r, g, b):
-		self.name=name
-		self.color=(r,g,b)
-		self.lockColor=(r*.4,g*.4,b*.4)
-		self.addr = 0
