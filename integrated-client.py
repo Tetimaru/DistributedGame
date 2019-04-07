@@ -66,28 +66,9 @@ if len(sys.argv) > 1:
     print("sending request")
 
 class playerAssociation(object):
-    def __init__(color, addr):
+    def __init__(self,color, addr):
         self.color = color 
         self.addr = addr  
-
-def updateServerState(sock):
-    # send the server the current state of board
-    board = [[0 for i in range(height)] for j in range(width)]
-    print("In update server")
-    # if this client is backup server, it should receive 
-    for i in range(height):
-        for j in range(width):
-            owner = gameMap[i][j].belongsTo
-            board[i][j] = playerAssociation(owner.color, owner.addr)
-    print(board)
-    terminate()
-    request = {
-        "function": "update_board",
-        "board": board 
-    }
-
-    while not create_request(lock_request):
-        continue
 
 def startNewServer():
     # start a new server process
@@ -258,11 +239,21 @@ def showStartScreen():
         screen.blit(titleSurf, titleRect)
         pygame.display.update()
 
+def updateBoard(list):#synchs Client board with Server Board
+    boardstate=list
+    gameBoard.updateState(boardstate)
+    for row in range(gameBoard.row):
+        for col in range(gameBoard.col):
+            playerName = gameBoard[row][col].belongsTo
+            #player= 
+            # if playerName = 0:
+            #pass
+            #else:
+            # pass
 
-def updateServerState(sock):
-    # send the server the current state of board
+def updateServerState(sock):# send the server the current state of board
+    #only happen when backup server is being created
     boardstate=gameBoard.getState()
-    print("In update server")
     updateServerBoard_request = {
         "function": "updateBoard",
         "player": p1.name,
@@ -274,31 +265,24 @@ def updateServerState(sock):
     while not create_request(updateServerBoard_request):
         continue
     print("created request")
-    #wait for server reply
     waiting_for_server = True
 
 def serverCrash():
     #assert: game is paused and server has crashed
     if isBackup: #client is backup server
-        pass#remove
         #start server
         startNewServer()
         #client connects to server
+        
 
         #unpause client resume game
     else: #client is not backup server
-        pass
-        #try connecting to new server
-        #upon successful connection unpause game
-    
-def startNewServer():
-    # start a new server process
-    args = ['python', 'app-server.py']
-    p = subprocess.Popen(args)
-    # connect to new server
-    sel.unregister(sock)
-    socket.close(sock)
-    start_connection((HOST, PORT))
+        print("client is not backup server")
+        # connect to new server
+        sel.unregister(sock)
+        socket.close(sock)
+        start_connection((HOST, PORT))
+      
 
 def main():
     global TITLEFONT, p1
