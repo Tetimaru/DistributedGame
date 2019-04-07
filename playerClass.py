@@ -10,3 +10,4 @@ class gamePlayer:
 		self.name=name
 		self.color=(r,g,b)
 		self.lockColor=(r*.4,g*.4,b*.4)
+		self.addr = 0

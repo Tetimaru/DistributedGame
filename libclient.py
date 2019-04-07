@@ -86,12 +86,16 @@ class MessageIn:
             if data:
                 self._recv_buffer += data
             else:
+                # server has crashed
+                return False
                 raise RuntimeError("server _read: received \
                 no data (shouldn't be here?)") # shouldn't happen on server side
     
     # entry point when data is available to be read on socket
     def read(self):
-        self._read()
+        s = self._read()
+        if s == False:
+            return s
         self.process_read_buffer()
 
         if self.client_request:

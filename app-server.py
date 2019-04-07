@@ -31,14 +31,21 @@ ALL_COLORS = [ (255, 0, 0), # red
 # port = sys.argv[2]
 
 sel = selectors.DefaultSelector() # to monitor multiple socket connections
-NUM_PLAYERS = 2
-client_socks = []
+
+NUM_PLAYERS = 1
+clients = [] # list of ConnectedPlayer objects
 clock_sync_frequency = 3 * 1000000 # 1,000,000 roughly equals to 1.5 seconds
 
 # global flags
 rdy_for_new_msg = True # Flag to determine if the previous read/write message has completed processing
 # If True, we should create a new message class to handle the next message
 
+class ConnectedPlayer(object):
+    def __init__(sock, color, addr, id):
+        self.sock = sock
+        self.color = color
+        self.addr = addr
+        self.id = id 
 
 def clockSync():
     all_socks = [socket for socket in client_socks]
@@ -124,19 +131,22 @@ def accept_wrapper(sock):
     print('accepted connection from', addr)
     conn.setblocking(False)
     sel.register(conn, selectors.EVENT_READ, data=1)
-    client_socks.append(conn)
-    if len(client_socks) == NUM_PLAYERS:
+    new_player = ConnectedPlayer(conn, ALL_COLORS[len(clients)], addr, len(clients)+1)
+    clients.append(new_player)
+    if len(clients) == NUM_PLAYERS:
         # we have enough players to start the game, notify clients
-        for i, soc in enumerate(client_socks):
+        for player in clients:
             notification = {
                 "function": "start",
                 "args": {
-                    "player_num": i,
-                    "player_colors": ALL_COLORS[:NUM_PLAYERS]
+                    "player_num": player.id,
+                    "player_color": player.color,
+                    "player_addr": player.addr
                 }
             }
-            new_messageOut(soc, notification)
-        return True
+
+            new_messageOut(player.sock, notification)
+            return True
     
 
 def process_request(sock, request):
@@ -146,7 +156,7 @@ def process_request(sock, request):
     
         locked=lockSquare(sock,request["player"],request["args"]["x"],request["args"]["y"])        
         # send messages to all the other clients
-        other_socks = [socket for socket in client_socks if socket != sock]
+        other_socks = [player.sock for player in clients if player.sock != sock]
         #print(other_socks)
 
         if locked:
@@ -166,7 +176,7 @@ def process_request(sock, request):
     #unlock request    
     elif request["function"] == "unlock_square":
         conquered= unlockSquare(sock,request["player"],request["args"]["x"],request["args"]["y"],request["args"]["conquered"])        #send messages to all other clients
-        other_socks = [socket for socket in client_socks if socket != sock]
+        other_socks = [player.sock for player in clients if player.sock != sock]
         for socket in other_socks:
             response = {
                 "function": "unlock_square",

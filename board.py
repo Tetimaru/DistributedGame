@@ -3,14 +3,45 @@ import operator
 import sys
 import unittest
 
-
 __version__ = "0.3"
-class gameSquare:
+        
+
+class Square:
 	# Game Square variables
-	conquered=False # if square has been conquered by anyone yet
 	lock=False
-	belongsTo=None # player that locks this square. can be changed later to be the player's number or whatever.
+	belongsTo=0 # player that locks this square. can be changed later to be the player's number or whatever.
+	conquered=False #  # same as above. right now the entire player instance is passed into here
+
 	
+	def __init__(self):
+		self.lock = False
+		self.conquered=False
+		self.belongsTo = 0
+
+
+	def lockSquare(self, lockPlayer):
+		if((self.lock == False) and (self.conquered==False)):
+			self.lock = True
+			self.belongsTo=lockPlayer
+
+
+	def unlockSquare(self, lockPlayer):
+		if (lockPlayer == self.belongsTo):
+			self.belongsTo=None
+			self.lock = False
+
+
+	def conquer(self, lockPlayer):
+		if (lockPlayer == self.belongsTo):
+			self.conquered=True
+			self.belongsTo=lockPlayer
+			self.lock=False
+
+	def revert(self, lockPlayer):
+		if (lockPlayer == self.belongsTo):
+			self.belongsTo=None
+			self.lock=False
+
 
 class BoardError(Exception):
     """ An exception class for Board """
@@ -18,24 +49,38 @@ class BoardError(Exception):
 
 class Board(object):
     
-    def __init__(self, m, n, init=True):
+    def __init__(self, row, col, init=True):
         if init:
-            self.rows = [[gameSquare]*n for x in range(m)]
+            self.rows=[]
+            for i in range (row):
+                cols=[]
+                for j in range(col):
+                    cols.append(Square())
+                self.rows.append(cols)
         else:
-            self.rows = []
-        self.row = m
-        self.col = n
-        self.gameSquare = gameSquare
+             self.rows = []
+        self.row = row
+        self.col = col
         
     def __getitem__(self, idx):
+        print(self.rows[idx])
         return self.rows[idx]
 
-    def __setitem__(self, gameSquare, item):
-        self.rows[self.gameSquare] = item
+    def __setitem__(self, idx, item):
+        self.rows[idx] = item
         
     def __str__(self):
         s='\n'.join([' '.join([str(item.belongsTo) for item in row]) for row in self.rows])
-        return s + '\n'
+        '''
+        s=' '
+        for row in self.rows:
+            s.join(' ')
+            for item in row:
+                print(self)
+                player=self[item].belongsTo
+            s.join(str(player))
+        '''
+        return s + '\n'        
 
     def __repr__(self):
         s=str(self.rows)
@@ -49,7 +94,6 @@ class Board(object):
     def save(self, filename):
         open(filename, 'w').write(str(self))
         
-   
         
     @classmethod
     def makeRandom(cls, m, n, low=0, high=10):
@@ -63,8 +107,8 @@ class Board(object):
     @classmethod
     def createBoard(cls, m, n):
         """ Make a zero-matrix board of rank (mxn) """
-        rows = [[gameSquare]*n for x in range(m)]
-        return cls.fromList(rows)
+        b = Board(m,n,True)
+        return b
 
     
     @classmethod
@@ -75,7 +119,6 @@ class Board(object):
         while True:
             line = sys.stdin.readline().strip()
             if line=='q': break
-
             row = [int(x) for x in line.split()]
             rows.append(row)
             
@@ -113,11 +156,15 @@ class Board(object):
         s=' '.join([' '.join([str(item.belongsTo) for item in row]) for row in self.rows])
         return s.split(' ')
     
+
     def updateState(self,list):
         #defualt board is 8x8
-        for i in range(2):
-            for j in range(2):
-                self[i][j].belongsTo = list[i+j]
+        l=0
+        for i in range(self.row):
+            for j in range(self.col):
+                print(list[i+j])
+                self[i][j].belongsTo = list[l]
+                l+=1
         return self
   
 
