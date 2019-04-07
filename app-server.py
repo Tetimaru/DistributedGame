@@ -33,6 +33,7 @@ ALL_COLORS = [ (255, 0, 0), # red
 sel = selectors.DefaultSelector() # to monitor multiple socket connections
 NUM_PLAYERS = 2
 client_socks = []
+clock_sync_frequency = 3 * 1000000 # 1,000,000 roughly equals to 1.5 seconds
 
 # global flags
 rdy_for_new_msg = True # Flag to determine if the previous read/write message has completed processing
@@ -245,7 +246,7 @@ def main():
                     # write the data to the socket
                     messageOut = key.data
                     out = messageOut.write()
-        if timecounter%3000000==0 and sync_ok==True:
+        if timecounter%clock_sync_frequency==0 and sync_ok==True:
             clockSync()
             print('synching clocks')
             timecounter=0
