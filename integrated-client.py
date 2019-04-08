@@ -24,14 +24,14 @@ backupClient= None
 
 
 # should get host and port from the command line
-HOST = '142.58.15.224'
+HOST = '142.58.15.41'
 
 ### THIS SECTION WILL BE REMOVED WHEN IP ADDRESS IS PASSED AS ARGUMENT WHEN RUNNING
-addrArg = input("input IP address of game Host: ") 
-if (addrArg == ""): # if no input, connect to self. applies to the client that is hosting
-    HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8') #get own external IP addr
-else:
-    HOST = str(addrArg) # use whatever was input
+# addrArg = input("input IP address of game Host: ") 
+# if (addrArg == ""): # if no input, connect to self. applies to the client that is hosting
+#     HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8') #get own external IP addr
+# else:
+#     HOST = str(addrArg) # use whatever was input
 
 PORT = 65432
 
@@ -60,6 +60,7 @@ ALL_COLORS = [ (255, 0, 0), # red
 # port = sys.argv[2]
 sel = selectors.DefaultSelector() # socket setup
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock2 = None
 
 # global flags
 rdy_for_new_msg = True # Flag to determine if the previous read/write message has completed processing
@@ -81,24 +82,6 @@ class playerAssociation(object):
         self.color = color 
         self.addr = addr  
 
-def startNewServer():
-    # start a new server process
-    args = ['python', 'app-server.py','1']
-    p = subprocess.Popen(args)
-    # connect to new server
-    global HOST 
-    HOST = backupClient.addr[0]
-    print("HOST: " + HOST)
-    sel.unregister(sock)
-    #sock.close()
-    start_connection((HOST, PORT))
-
-def start_connection(addr):
-    print('starting connection to', addr)
-    sock.setblocking(False)
-    sock.connect_ex(addr)
-    sel.register(sock, selectors.EVENT_READ, data=None)
-
 #server tell client to lock square xy for player x
 def lockSquare(player,x,y):
     p=players[player-1]
@@ -107,7 +90,6 @@ def lockSquare(player,x,y):
     lockingSquare.belongsTo = p
     gameMap[x][y].lockSquare(players[player-1])
     drawSquare(gameMap,x,y)
-
 
 #server tell client to unlock square xy for player x
 def unlockSquare(player,x,y,conquered):
@@ -269,8 +251,31 @@ def getPlayer(playerID):#get player object from player id
         if player.id==playerID:
             return player
 
+def startNewServer():
+    # start a new server process
+    args = ['python', 'app-server.py','1']
+    p = subprocess.Popen(args)
+    # connect to new server
+    global HOST 
+    HOST = backupClient.addr[0]
+    print("HOST: " + HOST)
+    global sock 
+    sel.unregister(sock)
+    sock.close()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    import time
+    time.sleep(2)
+    start_connection((HOST, PORT))
+
+def start_connection(addr):
+    print('starting connection to', addr)
+    sock.setblocking(False)
+    sock.connect_ex(addr)
+    sel.register(sock, selectors.EVENT_READ, data=None)
+
 def updateServerState():# send the server the current state of board
     #only happen when backup server is being created
+    print("in update server state")
     boardstate=gameBoard.getState()
     updateServerBoard_request = {
         "function": "updateBoard",
@@ -279,11 +284,12 @@ def updateServerState():# send the server the current state of board
             "boardstate": boardstate,
         }
     }
-    # print(rdy_for_new_msg)
+    print("before while")
+    print(rdy_for_new_msg)
     while not create_request(updateServerBoard_request):
         continue
     print("created request")
-    waiting_for_server = True
+    #waiting_for_server = True
 
 def serverCrash():
     #assert: game is paused and server has crashed
@@ -348,10 +354,10 @@ def main():
                 # if data, process it and create a response 
                 if out == False:
                     # Main server has crashed
+                    setReadyForNewMsg(True)
                     serverCrash()
                     updateServerState()
-                    return
-
+                    break
                 if out:
                     process_response(out, rect_x, rect_y, mouse_pos)
                     waiting_for_server = False
