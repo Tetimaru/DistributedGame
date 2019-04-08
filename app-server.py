@@ -286,11 +286,11 @@ def main():
                     # write the data to the socket
                     messageOut = key.data
                     out = messageOut.write()
-        # if timecounter%clock_sync_frequency==0 and sync_ok==True:
-        #     clockSync()
-        #     print('synching clocks')
-        #     timecounter=0
-        # timecounter+=1
+        if timecounter%clock_sync_frequency==0 and sync_ok==True:
+            clockSync()
+            print('synching clocks')
+            timecounter=0
+        timecounter+=1
         #print(str(timecounter))
         
 if __name__ == "__main__":
