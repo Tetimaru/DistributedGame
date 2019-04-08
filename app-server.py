@@ -14,7 +14,7 @@ gameBoard = Board.createBoard(8,8)
 
 # should get host and port from the command line
 
-HOST = '142.58.15.41'
+HOST = '142.58.15.141'
 PORT = 65432
 
 ALL_COLORS = [ (255, 0, 0), # red
