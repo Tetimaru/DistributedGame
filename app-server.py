@@ -14,13 +14,8 @@ gameBoard = Board.createBoard(8,8)
 
 # should get host and port from the command line
 
-### THIS SECTION WILL BE REMOVED WHEN IP ADDRESS IS PASSED AS ARGUMENT WHEN RUNNING
-addrArg = input("input IP address of game Host: ") 
-if (addrArg == ""): # if no input, connect to self. applies to the client that is hosting
-    HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8') #get own external IP addr
-else:
-    HOST = str(addrArg) # use whatever was input
-
+#HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8')
+HOST = '142.58.15.120'
 PORT = 65432
 
 ALL_COLORS = [ (255, 0, 0), # red
@@ -286,12 +281,12 @@ def main():
                     # write the data to the socket
                     messageOut = key.data
                     out = messageOut.write()
-        # if timecounter%clock_sync_frequency==0 and sync_ok==True:
-        #     clockSync()
-        #     print('synching clocks')
-        #     timecounter=0
-        # timecounter+=1
-#        print(str(timecounter))
+        if timecounter%clock_sync_frequency==0 and sync_ok==True:
+            clockSync()
+            print('synching clocks')
+            timecounter=0
+        timecounter+=1
+        #print(str(timecounter))
 if __name__ == "__main__":
     main()
 

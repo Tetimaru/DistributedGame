@@ -86,7 +86,7 @@ class MessageIn:
                 self._recv_buffer += data
             else:
                 # client socket closed connection for some reason 
-                pass
+                self.close()
     
     # entry point when data is available to be read on socket
     def read(self):
@@ -95,5 +95,10 @@ class MessageIn:
 
         if self.client_request:
         	return self.client_request
+
+    def close(self):
+        print('closing connection to', self.addr)
+        self.sel.unregister(self.sock)
+        self.sock.close()
     
 

@@ -28,13 +28,6 @@ HOST = '142.58.15.224'
 # HOST = '127.0.0.1'
 
 
-### THIS SECTION WILL BE REMOVED WHEN IP ADDRESS IS PASSED AS ARGUMENT WHEN RUNNING
-addrArg = input("input IP address of game Host: ") 
-if (addrArg == ""): # if no input, connect to self. applies to the client that is hosting
-    HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8') #get own external IP addr
-else:
-    HOST = str(addrArg) # use whatever was input
-
 PORT = 65432
 
 # pygame 
