@@ -183,7 +183,7 @@ def process_pregame(payload):
         player_id = payload["args"]["player_id"]
         addresses = payload["args"]["player_addrs"]
         playerIsBackup = payload["args"]["player_isbackup"]
-        for i, color in enumerate(ALL_COLORS[:2]):
+        for i, color in enumerate(ALL_COLORS[:len(addresses)]):
             p = playerClass.gamePlayer(i+1, color, addresses[i])
             players.append(p)
             if i+1 == player_id:
@@ -257,7 +257,7 @@ def getPlayer(playerID):#get player object from player id
 
 def startNewServer():
     # start a new server process
-    args = ['python', 'app-server.py','1']
+    args = ['python', 'app-server.py', str(len(players)-1)]
     p = subprocess.Popen(args)
     # connect to new server
     global HOST 
@@ -321,6 +321,8 @@ def main():
     showStartScreen()
     screen.fill(BLACK)
     #time.sleep(2)
+    print(players)
+    print(p1)
     
     # init some vars for later use
     rect_x = 0 
