@@ -182,25 +182,21 @@ def process_pregame(payload):
         # add all player information
         player_id = payload["args"]["player_id"]
         addresses = payload["args"]["player_addrs"]
-        playerIsBackup = payload["args"]["player_isbackup"]
+        backupPlayer = payload["args"]["player_backupplayer"]
         for i, color in enumerate(ALL_COLORS[:len(addresses)]):
             p = playerClass.gamePlayer(i+1, color, addresses[i])
             players.append(p)
             if i+1 == player_id:
                 global p1
                 p1 = p
-                print("CLIENT####### adding player " + str(p.id))
-                if playerIsBackup == True:
-                    #current client is designated backup machine
-                    global isBackup
-                    isBackup= True
-                    backupClient= p
-                    playerIsBackup=False
-                    print("CLIENT####### backup client is " + str(p.id))
-            elif playerIsBackup == True:
+            if backupPlayer == p1.id:
+                #current client is designated backup machine
+                global isBackup
+                isBackup= True
+                backupClient= p
+            elif backupPlayer == p.id:
                 #current player is designated as backup but is not the current client machine
                 backupClient= p
-                playerIsBackup=False
                 print("CLIENT####### backup client is " + str(p.id))
         
         # start the game
@@ -291,25 +287,40 @@ def updateServerState():# send the server the current state of board
             "boardstate": boardstate,
         }
     }
-    while not create_request(sock2, updateServerBoard_request):
+    print("before while")
+    print(rdy_for_new_msg)
+    while not create_request(updateServerBoard_request):
         continue
+    print("created request")
 
+def connectToServer():
+    # connect to new server
+    print("in connectToServer()")
+    sel.unregister(sock)
+    print("unregister sock ")
+   
+    sock.close
+    print("close socket")
+    time.sleep(5)
+    print("sleep for 5 seconds then attemp to start connection")
+    start_connection(sock2,(HOST, PORT))
 
 def serverCrash():
+    global HOST
+    HOST = backupClient.addr[0]
+    print("new host is now " + str(HOST))
     #assert: game is paused and server has crashed
     if isBackup: #client is backup server
         #start backup server
+
         startNewServer()
+        connectToServer()
+
         #client connected to backup server
-        
     else: #client is not backup server
         print("client is not backup server")
         # connect to new server
-        global HOST 
-        HOST= backupClient.addr
-        sel.unregister(sock)
-        socket.close(sock)
-        #start_connection((HOST, PORT))
+        connectToServer()
       
 
 def main():
