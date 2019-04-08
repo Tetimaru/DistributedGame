@@ -69,10 +69,8 @@ class MessageIn:
             return
            
         self.client_request = self._json_decode(self._recv_buffer) # dict form
-        print('received request', repr(self.client_request), 'from', self.addr)
+        print('SERVER####### received', repr(self.client_request), 'from', self.addr)
 
-        # we want to write a response, so monitor for write availability 
-        self.sel.modify(self.sock, selectors.EVENT_WRITE, data=self)
 
     # receive data from socket and store in _recv_buffer
     def _read(self):
