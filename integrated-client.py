@@ -24,11 +24,7 @@ backupClient= None
 
 
 # should get host and port from the command line
-<<<<<<< HEAD
 HOST = '142.58.15.224'
-=======
-# HOST = '127.0.0.1'
->>>>>>> 6359e0bde899b6ffc85f733fc2bfb2525711b130
 
 ### THIS SECTION WILL BE REMOVED WHEN IP ADDRESS IS PASSED AS ARGUMENT WHEN RUNNING
 addrArg = input("input IP address of game Host: ") 
