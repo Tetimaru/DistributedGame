@@ -14,7 +14,7 @@ gameBoard = Board.createBoard(8,8)
 
 # should get host and port from the command line
 
-HOST = '142.58.15.224'
+HOST = '142.58.15.41'
 PORT = 65432
 
 ALL_COLORS = [ (255, 0, 0), # red
@@ -126,6 +126,7 @@ def unlockSquare(sock,player,x,y,conquered):
 
     
 def accept_wrapper(sock):
+    isBackup = False
     conn, addr = sock.accept()
     print('accepted connection from', addr)
     conn.setblocking(False)
@@ -137,7 +138,7 @@ def accept_wrapper(sock):
         # we have enough players to start the game, notify clients
         backupChosen=False
         for player in clients:
-            if player.addr != HOST and backupChosen==False:
+            if player.addr[0] != HOST and backupChosen==False:
                 isBackup=True
                 backupChosen=True
             else:
@@ -224,11 +225,17 @@ def sendUpdateToClients(req_func):
 
 def start_listening():
     # set up socket to listen for incoming connections
+    print("SERVER: in start_listening")
     lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # listening socket
+    print("SERVER: settings lock to listening socket")
     lsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # avoid bind() exception: address already in use
+    print("SERVER: avoid bind() exception: address already in use")
+    print('SERVER: lsock is binding Host: ' + str(HOST) +' with Port ' +str(PORT))
     lsock.bind((HOST, PORT))
+    print("SERVER: binded lsock")
+
     lsock.listen()
-    print('listening on', (HOST, PORT))
+    print('SERVER:listening on', (HOST, PORT))
     lsock.setblocking(False)
     sel.register(lsock, selectors.EVENT_READ, data=None)
 
@@ -247,11 +254,14 @@ def updateBoard(list):#synchs Client board with Server Board after backup server
     gameBoard.updateState(boardstate)
     
 def main():
+    print("SERVER: starting server")
     start_listening()
+    print("SERVER: server started listening")
     timecounter = 0
     sync_ok = False
     # socket event loop
     while True:
+
         events = sel.select(timeout=0)
         for key, mask in events:
             if key.data is None: # listen socket
@@ -280,12 +290,14 @@ def main():
                     # write the data to the socket
                     messageOut = key.data
                     out = messageOut.write()
+        '''
         if timecounter%clock_sync_frequency==0 and sync_ok==True:
             clockSync()
             print('synching clocks')
             timecounter=0
         timecounter+=1
         #print(str(timecounter))
+        '''
 if __name__ == "__main__":
     main()
 

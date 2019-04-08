@@ -6,6 +6,7 @@ import selectors
 import sys
 import subprocess
 import libclient
+import time
 from board import Board
 import gameSquare
 import pygame
@@ -20,11 +21,12 @@ isBackup=False
 global time_diff
 time_diff = 0
 backupClient= None
+connected=False
 
 
 
 # should get host and port from the command line
-HOST = '142.58.15.224'
+HOST = '142.58.15.41'
 # HOST = '127.0.0.1'
 
 
@@ -81,18 +83,15 @@ def startNewServer():
     args = ['python', 'app-server.py','1']
     p = subprocess.Popen(args)
     # connect to new server
-    global HOST 
-    HOST= backupClient.addr
-    sel.unregister(sock)
-    socket.close(sock)
-    start_connection((HOST, PORT))
-    # 
-
+  
 def start_connection(addr):
     print('starting connection to', addr)
     sock.setblocking(False)
+    print('blocking sock is false')
     sock.connect_ex(addr)
+    print('connecting to addr')
     sel.register(sock, selectors.EVENT_READ, data=None)
+    print('register sock')
 
 #server tell client to lock square xy for player x
 def lockSquare(player,x,y):
@@ -204,9 +203,11 @@ def process_pregame(payload):
                     global isBackup
                     isBackup= True
                     backupClient= p
+                    print("Backup client is set to " + str(backupClient.id ))
             elif playerIsBackup == True:
                 #current player is designated as backup but is not the current client machine
                 backupClient= p
+                print("Backup client is set to " + str(backupClient.id))
         
         # start the game
         setReadyForNewMsg(True)
@@ -265,6 +266,7 @@ def getPlayer(playerID):#get player object from player id
             return player
 
 def updateServerState():# send the server the current state of board
+    print("updating server state")
     #only happen when backup server is being created
     boardstate=gameBoard.getState()
     updateServerBoard_request = {
@@ -280,22 +282,36 @@ def updateServerState():# send the server the current state of board
     print("created request")
     waiting_for_server = True
 
+def connectToServer():
+    # connect to new server
+    print("in connectToServer()")
+    sel.unregister(sock)
+    print("unregister sock ")
+   
+    sock.close
+    print("close socket")
+    time.sleep(5)
+    print("sleep for 5 seconds then attemp to start connection")
+    start_connection((HOST, PORT))
+        
+
 def serverCrash():
+    global HOST
+
+    HOST = backupClient.addr[0]
+    print("new host is now " + str(HOST))
     #assert: game is paused and server has crashed
     if isBackup: #client is backup server
         #start backup server
+
         startNewServer()
+        connectToServer()
+
         #client connected to backup server
-        
     else: #client is not backup server
         print("client is not backup server")
         # connect to new server
-        global HOST 
-        HOST= backupClient.addr
-        print("BACKUP ADDR " + str(HOST))
-        sel.unregister(sock)
-        socket.close(sock)
-        start_connection((HOST, PORT))
+        connectToServer()
       
 
 def main():
@@ -343,10 +359,15 @@ def main():
                 out = messageIn.read()
                 # if data, process it and create a response 
                 if out == False:
+                    print("recieved empty byte start backup server")
+
+                
+                    print("recieved empty byte start backup server")
                     # Main server has crashed
+                    setReadyForNewMsg(True)
                     serverCrash()
                     updateServerState()
-                    return
+                   
 
                 if out:
                     process_response(out, rect_x, rect_y, mouse_pos)
