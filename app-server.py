@@ -14,8 +14,13 @@ gameBoard = Board.createBoard(8,8)
 
 # should get host and port from the command line
 
-#HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8')
-HOST = '142.58.15.224'
+### THIS SECTION WILL BE REMOVED WHEN IP ADDRESS IS PASSED AS ARGUMENT WHEN RUNNING
+addrArg = input("input IP address of game Host: ") 
+if (addrArg == ""): # if no input, connect to self. applies to the client that is hosting
+    HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8') #get own external IP addr
+else:
+    HOST = str(addrArg) # use whatever was input
+
 PORT = 65432
 
 ALL_COLORS = [ (255, 0, 0), # red

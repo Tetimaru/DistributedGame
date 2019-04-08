@@ -25,12 +25,15 @@ backupClient= None
 
 # should get host and port from the command line
 HOST = '142.58.15.224'
+# HOST = '127.0.0.1'
 
-# addrArg = input("input IP address of game Host: ")
-# if (addrArg == ""):
-#     HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8')
-# else:
-#     HOST = str(addrArg)
+
+### THIS SECTION WILL BE REMOVED WHEN IP ADDRESS IS PASSED AS ARGUMENT WHEN RUNNING
+addrArg = input("input IP address of game Host: ") 
+if (addrArg == ""): # if no input, connect to self. applies to the client that is hosting
+    HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8') #get own external IP addr
+else:
+    HOST = str(addrArg) # use whatever was input
 
 PORT = 65432
 
@@ -57,14 +60,14 @@ ALL_COLORS = [ (255, 0, 0), # red
     
 # host = sys.argv[1]
 # port = sys.argv[2]
-sel = selectors.DefaultSelector()
+sel = selectors.DefaultSelector() # socket setup
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # global flags
 rdy_for_new_msg = True # Flag to determine if the previous read/write message has completed processing
 # If True, we should create a new message class to handle the next message
 
-request = None
+request = None # legacy code
 if len(sys.argv) > 1:
     request = {
         "function": "lock",
@@ -105,13 +108,13 @@ def lockSquare(player,x,y):
     lockingSquare.lock = True
     lockingSquare.belongsTo = p
     gameMap[x][y].lockSquare(players[player-1])
-    drawbg(gameMap,height,width,size,gap)
+    drawSquare(gameMap,x,y)
 
 
 #server tell client to unlock square xy for player x
 def unlockSquare(player,x,y,conquered):
-    unlockingSquare = gameBoard[x][y]
-    unlockingSquare.lock=False
+    unlockingSquare = gameBoard[x][y] # get the instance of gameSquare at (x,y)
+    unlockingSquare.lock=False # set the lock var to False
     if conquered:
         #square is conquered by player
         unlockingSquare.conquered = True
@@ -150,6 +153,7 @@ def new_messageOut(sock, request):
 def process_response(response, x, y, mouse_pos):
     if response["function"] == "clock_sync":
         time_diff = response["args"]["server_clock"] - int(round(time.time()*1000))
+        print("Received clock sync; time diff between client and server is "+str(time_diff)+"\n")
         setReadyForNewMsg(True)
     elif response["function"]== "update_baord":
         boardstate= response["args"]["boardstate"]
@@ -277,7 +281,7 @@ def updateServerState():# send the server the current state of board
             "boardstate": boardstate,
         }
     }
-    print(rdy_for_new_msg)
+    # print(rdy_for_new_msg)
     while not create_request(updateServerBoard_request):
         continue
     print("created request")
@@ -368,12 +372,12 @@ def main():
             if e.type == pygame.KEYDOWN: 
                 if e.key == pygame.K_ESCAPE: # press esc to exit game
                     terminate()
-                if e.key == pygame.K_SPACE: # press space to clear board (for debug use only)
-                    for i in range(height):
-                        for j in range(width):
-                            gameMap[i][j].squareColor=(255,255,255,255)
-                            screen.fill((0,0,0,0))
-                            draw(gameMap,height,width,size,gap)
+                # if e.key == pygame.K_SPACE: # press space to clear board (for debug use only)
+                #     for i in range(height):
+                #         for j in range(width):
+                #             gameMap[i][j].squareColor=(255,255,255,255)
+                #             screen.fill((0,0,0,0))
+                #             draw(gameMap,height,width,size,gap)
 
             if e.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = e.pos # get position of mouseclick event
@@ -390,15 +394,15 @@ def main():
                                 pass #not sure if this works test it!
                             #send lock request lockSquareReq(i,j)
                             lock_request = {
+                                "tstamp": int(round(time.time()*1000)) + time_diff,
                                 "function": "lock",
                                 "player": p1.id,
                                 "args": {
-				                    "tstamp": int(round(time.time()*1000)) + time_diff,
                                     "x": rect_x,
                                     "y": rect_y
                                 }
                             }
-                            print(rdy_for_new_msg)
+                            # print(rdy_for_new_msg)
                             while not create_request(lock_request):
                                 continue
                             print("created request")
@@ -430,17 +434,17 @@ def main():
                 if (player_pixel/square_pixel >= conquerpercent): # player conquered square
                     #send request to unlock conquered square
                     unlock_request = {
-                                "function": "unlock_square",
-                                "player": p1.id,
-                                "args": {
-				    "tstamp": int(round(time.time()*1000)) + time_diff,
-                                    "x": rect_x,
-                                    "y": rect_y,
-                                    "conquered": True
-                                }
-                            }
+                        "tstamp": int(round(time.time()*1000)) + time_diff,
+                        "function": "unlock_square",
+                        "player": p1.id,
+                        "args": {
+		                    "x": rect_x,
+                            "y": rect_y,
+                            "conquered": True
+                        }
+                    }
                     #await server response
-                    print(rdy_for_new_msg)
+                    # print(rdy_for_new_msg)
                     while not create_request(unlock_request):
                         continue
                     print("created unlock request for conquered square")
@@ -449,17 +453,18 @@ def main():
                 else:    #player failed to conquer
                     #send request to unlock unconquered square
                     unlock_request = {
-                                "function": "unlock_square",
-                                "player": p1.id,
-                                "args": {
-				    "tstamp": int(round(time.time()*1000)) + time_diff,
-                                    "x": rect_x,
-                                    "y": rect_y,
-                                    "conquered": False
-                                }
-                            }
+                        "tstamp": int(round(time.time()*1000)) + time_diff,
+                        "function": "unlock_square",
+                        "player": p1.id,
+                        "args": {
+		    
+                            "x": rect_x,
+                            "y": rect_y,
+                            "conquered": False
+                        }
+                    }
                     #await server response
-                    print(rdy_for_new_msg)
+                    # print(rdy_for_new_msg)
                     while not create_request(unlock_request):
                         continue
                     print("created unlock request for unconquered square")
