@@ -19,7 +19,8 @@ requestedSquare= None
 isBackup=False
 global time_diff
 time_diff = 0
-backupClient= None
+global backupClient
+backupClient = None
 
 
 
