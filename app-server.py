@@ -14,8 +14,7 @@ gameBoard = Board.createBoard(8,8)
 
 # should get host and port from the command line
 
-#HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8')
-HOST = '142.58.15.120'
+HOST = '142.58.15.224'
 PORT = 65432
 
 ALL_COLORS = [ (255, 0, 0), # red
