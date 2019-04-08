@@ -24,7 +24,7 @@ backupClient= None
 
 
 # should get host and port from the command line
-HOST = '142.58.15.41'
+HOST = '142.58.15.181'
 
 ### THIS SECTION WILL BE REMOVED WHEN IP ADDRESS IS PASSED AS ARGUMENT WHEN RUNNING
 # addrArg = input("input IP address of game Host: ") 
@@ -189,11 +189,11 @@ def process_pregame(payload):
             if i+1 == player_id:
                 global p1
                 p1 = p
-            if backupPlayer == p1.id:
-                #current client is designated backup machine
-                global isBackup
-                isBackup= True
-                backupClient= p
+                if backupPlayer == p1.id:
+                    #current client is designated backup machine
+                    global isBackup
+                    isBackup= True
+                    backupClient= p
             elif backupPlayer == p.id:
                 #current player is designated as backup but is not the current client machine
                 backupClient= p
@@ -261,14 +261,7 @@ def startNewServer():
     args = ['python', 'app-server.py', str(len(players)-1)]
     p = subprocess.Popen(args)
     # connect to new server
-    global HOST 
-    HOST = backupClient.addr[0]
-    sel.unregister(sock)
-    sock.close()
-    time.sleep(2)
-    start_connection(sock2, (HOST, PORT))
-    global secondTime
-    secondTime = True
+    connectToServer()
 
 def start_connection(soc2, addr):
     print('CLIENT####### starting connection to', addr)
@@ -289,21 +282,20 @@ def updateServerState():# send the server the current state of board
     }
     print("before while")
     print(rdy_for_new_msg)
-    while not create_request(updateServerBoard_request):
+    while not create_request(sock2, updateServerBoard_request):
         continue
     print("created request")
 
 def connectToServer():
     # connect to new server
-    print("in connectToServer()")
+    global HOST 
+    HOST = backupClient.addr[0]
     sel.unregister(sock)
-    print("unregister sock ")
-   
-    sock.close
-    print("close socket")
-    time.sleep(5)
-    print("sleep for 5 seconds then attemp to start connection")
-    start_connection(sock2,(HOST, PORT))
+    sock.close()
+    time.sleep(2)
+    start_connection(sock2, (HOST, PORT))
+    global secondTime
+    secondTime = True
 
 def serverCrash():
     global HOST
@@ -314,7 +306,6 @@ def serverCrash():
         #start backup server
 
         startNewServer()
-        connectToServer()
 
         #client connected to backup server
     else: #client is not backup server
@@ -371,7 +362,8 @@ def main():
                     # Main server has crashed
                     setReadyForNewMsg(True)
                     serverCrash()
-                    updateServerState()
+                    if isBackup:
+                        updateServerState()
                     break
                 if out:
                     process_response(out, rect_x, rect_y, mouse_pos)
