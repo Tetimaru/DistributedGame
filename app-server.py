@@ -142,7 +142,8 @@ def accept_wrapper(sock):
                 isBackup=True
                 backupChosen=True
             else:
-                backupChosen=False
+                isBackup=False
+            
             notification = {
                 "function": "start",
                 "args": {
@@ -292,7 +293,7 @@ def main():
         #     timecounter=0
         # timecounter+=1
         #print(str(timecounter))
-        '''
+        
 if __name__ == "__main__":
     main()
 
