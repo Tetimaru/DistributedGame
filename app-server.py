@@ -146,7 +146,7 @@ def accept_wrapper(sock):
             notification = {
                 "function": "start",
                 "args": {
-                    "player_num": player.id,
+                    "player_id": player.id,
                     "player_addrs": [client.addr for client in clients],
                     "player_isbackup": isBackup
                 }

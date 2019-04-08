@@ -19,7 +19,8 @@ requestedSquare= None
 isBackup=False
 global time_diff
 time_diff = 0
-backupClient= None
+global backupClient
+backupClient = None
 
 
 
@@ -205,11 +206,11 @@ def process_pregame(payload):
                     #current client is designated backup machine
                     global isBackup
                     isBackup= True
-                    global backupClient
+                    # global backupClient
                     backupClient= p
             elif playerIsBackup == True:
                 #current player is designated as backup but is not the current client machine
-                global backupClient
+                # global backupClient
                 backupClient= p
         
         # start the game
