@@ -182,19 +182,19 @@ def process_pregame(payload):
         # add all player information
         player_id = payload["args"]["player_id"]
         addresses = payload["args"]["player_addrs"]
-        playerIsBackup = payload["args"]["player_isbackup"]
+        backupPlayer = payload["args"]["player_backupplayer"]
         for i, color in enumerate(ALL_COLORS[:len(addresses)]):
             p = playerClass.gamePlayer(i+1, color, addresses[i])
             players.append(p)
             if i+1 == player_id:
                 global p1
                 p1 = p
-                if playerIsBackup == True:
+            if backupPlayer == p1.id:
                     #current client is designated backup machine
-                    global isBackup
-                    isBackup= True
-                    backupClient= p
-            elif playerIsBackup == True:
+                global isBackup
+                isBackup= True
+                backupClient= p
+            elif backupPlayer == p.id:
                 #current player is designated as backup but is not the current client machine
                 backupClient= p
         
