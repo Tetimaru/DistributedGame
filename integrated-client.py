@@ -189,7 +189,7 @@ def process_pregame(payload):
         # add all player information
         player_id = payload["args"]["player_id"]
         addresses = payload["args"]["player_addrs"]
-        playerIsBackup = payload["args"]["player_isbackup"]
+        playerIsBackup = payload["args"]["player_backupplayer"]
         print(addresses)
         for i, color in enumerate(ALL_COLORS[:2]):
             p = playerClass.gamePlayer(i+1, color, addresses[i])

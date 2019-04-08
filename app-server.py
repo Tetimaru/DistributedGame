@@ -126,7 +126,7 @@ def unlockSquare(sock,player,x,y,conquered):
 
     
 def accept_wrapper(sock):
-    isBackup = False
+    backupPlayer=0
     conn, addr = sock.accept()
     print('SERVER####### accepted connection from', addr)
     conn.setblocking(False)
@@ -139,17 +139,16 @@ def accept_wrapper(sock):
         backupChosen=False
         for player in clients:
             if player.addr[0] != HOST and backupChosen==False:
-                isBackup=True
+                backupPlayer= player.id
                 backupChosen=True
-            else:
-                isBackup=False
-            
+                
+        for player in clients:
             notification = {
                 "function": "start",
                 "args": {
                     "player_id": player.id,
                     "player_addrs": [client.addr for client in clients],
-                    "player_isbackup": isBackup
+                    "player_backupplayer": backupPlayer
                 }
             }            
 
