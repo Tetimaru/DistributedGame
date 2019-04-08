@@ -128,7 +128,7 @@ def unlockSquare(sock,player,x,y,conquered):
 def accept_wrapper(sock):
     isBackup = False
     conn, addr = sock.accept()
-    print('accepted connection from', addr)
+    print('SERVER####### accepted connection from', addr)
     conn.setblocking(False)
     sel.register(conn, selectors.EVENT_READ, data=1)
     new_player = ConnectedPlayer(conn, ALL_COLORS[len(clients)], addr, len(clients)+1)
@@ -150,10 +150,7 @@ def accept_wrapper(sock):
                     "player_addrs": [client.addr for client in clients],
                     "player_isbackup": isBackup
                 }
-            }
-            print(player)
-            print("in clients loop")
-            
+            }            
 
             new_messageOut(player.sock, notification)
     
@@ -161,14 +158,12 @@ def accept_wrapper(sock):
     
 
 def process_request(sock, request):
-    print("received", request)
     #locking request
     if request["function"] == "lock":
     
         locked=lockSquare(sock,request["player"],request["args"]["x"],request["args"]["y"])        
         # send messages to all the other clients
         other_socks = [player.sock for player in clients if player.sock != sock]
-        #print(other_socks)
 
         if locked:
             print("LOCK REQUEST APPROVED")
@@ -201,6 +196,7 @@ def process_request(sock, request):
             }
             new_messageOut(socket, response)
         setReadyForNewMsg(True)
+
     elif request["function"]== "updateBoard":#called only when main server is down and backup client starts backup server
         boardstate = request["args"]["boardstate"]
         updateBoard(boardstate)
@@ -239,17 +235,18 @@ def start_listening():
     lsock.setblocking(False)
     sel.register(lsock, selectors.EVENT_READ, data=None)
 
-
-
 def new_messageIn(sock):
+    print("SERVER####### In new_messageIn")
     message = libserver.MessageIn(sel, sock, (HOST, PORT))
     sel.modify(sock, selectors.EVENT_READ, data=message)
 
 def new_messageOut(sock, request):
+    print("SERVER####### In new_messageOut")
     message = libserver.MessageOut(sel, sock, (HOST, PORT), request)
     sel.modify(sock, selectors.EVENT_WRITE, data=message)
 
 def updateBoard(list):#synchs Client board with Server Board after backup server has crashed
+    print("SERVER####### In updateBord")
     boardstate=list
     gameBoard.updateState(boardstate)
     
@@ -271,7 +268,6 @@ def main():
             else: # existing client socket
                 if mask & selectors.EVENT_READ:
                     # *IF* we are completely done a previous read/write, create a new message class to:
-                    print(rdy_for_new_msg)
                     if rdy_for_new_msg:
                         new_messageIn(key.fileobj)
                         setReadyForNewMsg(False)
@@ -290,12 +286,11 @@ def main():
                     # write the data to the socket
                     messageOut = key.data
                     out = messageOut.write()
-        '''
-        if timecounter%clock_sync_frequency==0 and sync_ok==True:
-            clockSync()
-            print('synching clocks')
-            timecounter=0
-        timecounter+=1
+        # if timecounter%clock_sync_frequency==0 and sync_ok==True:
+        #     clockSync()
+        #     print('synching clocks')
+        #     timecounter=0
+        # timecounter+=1
         #print(str(timecounter))
         '''
 if __name__ == "__main__":

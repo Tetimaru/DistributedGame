@@ -6,7 +6,6 @@ import selectors
 import sys
 import subprocess
 import libclient
-import time
 from board import Board
 import gameSquare
 import pygame
@@ -26,8 +25,13 @@ backupClient= None
 
 # should get host and port from the command line
 HOST = '142.58.15.41'
-# HOST = '127.0.0.1'
 
+### THIS SECTION WILL BE REMOVED WHEN IP ADDRESS IS PASSED AS ARGUMENT WHEN RUNNING
+# addrArg = input("input IP address of game Host: ") 
+# if (addrArg == ""): # if no input, connect to self. applies to the client that is hosting
+#     HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8') #get own external IP addr
+# else:
+#     HOST = str(addrArg) # use whatever was input
 
 PORT = 65432
 
@@ -56,7 +60,8 @@ ALL_COLORS = [ (255, 0, 0), # red
 # port = sys.argv[2]
 sel = selectors.DefaultSelector() # socket setup
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock2 = None
+sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+secondTime = False
 
 # global flags
 rdy_for_new_msg = True # Flag to determine if the previous read/write message has completed processing
@@ -71,27 +76,12 @@ if len(sys.argv) > 1:
             "y": 1
         }
     }
-    print("sending request")
+    print("sending request but should not be here")
 
 class playerAssociation(object):
     def __init__(self,color, addr):
         self.color = color 
         self.addr = addr  
-
-def startNewServer():
-    # start a new server process
-    args = ['python', 'app-server.py','1']
-    p = subprocess.Popen(args)
-    # connect to new server
-  
-def start_connection(addr):
-    print('starting connection to', addr)
-    sock.setblocking(False)
-    print('blocking sock is false')
-    sock.connect_ex(addr)
-    print('connecting to addr')
-    sel.register(sock, selectors.EVENT_READ, data=None)
-    print('register sock')
 
 #server tell client to lock square xy for player x
 def lockSquare(player,x,y):
@@ -126,27 +116,30 @@ def setReadyForNewMsg(isReady):
     rdy_for_new_msg = isReady
 
 # return True if request was successfully queued, False otherwise
-def create_request(request):
+def create_request(soc2, request):
     if rdy_for_new_msg:
-        new_messageOut(sock, request)
+        new_messageOut(soc2, request)
         setReadyForNewMsg(False)
         return True
     return False
 
-def new_messageIn(sock):
-    message = libclient.MessageIn(sel, sock, (HOST, PORT))
-    sel.modify(sock, selectors.EVENT_READ, data=message)
+def new_messageIn(soc2):
+    print("CLIENT####### In new_messageIn")
+    message = libclient.MessageIn(sel, soc2, (HOST, PORT))
+    sel.modify(soc2, selectors.EVENT_READ, data=message)
 
-def new_messageOut(sock, request):
-    message = libclient.MessageOut(sel, sock, (HOST, PORT), request)
-    sel.modify(sock, selectors.EVENT_WRITE, data=message)
+def new_messageOut(soc2, request):
+    print("CLIENT####### In new_messageOut")
+    message = libclient.MessageOut(sel, soc2, (HOST, PORT), request)
+    sel.modify(soc2, selectors.EVENT_WRITE, data=message)
 
 def process_response(response, x, y, mouse_pos):
     if response["function"] == "clock_sync":
         time_diff = response["args"]["server_clock"] - int(round(time.time()*1000))
         print("Received clock sync; time diff between client and server is "+str(time_diff)+"\n")
         setReadyForNewMsg(True)
-    elif response["function"]== "update_baord":
+    elif response["function"]== "update_board":
+        print("detected update board")
         boardstate= response["args"]["boardstate"]
         updateBoard(boardstate)
     elif response["function"] == "lock":
@@ -190,7 +183,6 @@ def process_pregame(payload):
         player_id = payload["args"]["player_id"]
         addresses = payload["args"]["player_addrs"]
         playerIsBackup = payload["args"]["player_isbackup"]
-        print(addresses)
         for i, color in enumerate(ALL_COLORS[:2]):
             p = playerClass.gamePlayer(i+1, color, addresses[i])
             players.append(p)
@@ -202,17 +194,15 @@ def process_pregame(payload):
                     global isBackup
                     isBackup= True
                     backupClient= p
-                    print("Backup client is set to " + str(backupClient.id ))
             elif playerIsBackup == True:
                 #current player is designated as backup but is not the current client machine
                 backupClient= p
-                print("Backup client is set to " + str(backupClient.id))
         
         # start the game
         setReadyForNewMsg(True)
         return True
     else:
-        print("client startup not receiving proper startup message from server")
+        #print("client startup not receiving proper startup message from server")
         setReadyForNewMsg(True)
         return False
     
@@ -258,6 +248,7 @@ def updateBoard(list):#synchs Client board with Server Board after backup server
             else:
                 curr_player=getPlayer(playerID)
                 gameMap[row][col].conquer(curr_player)
+    print("in update board")
 
 def getPlayer(playerID):#get player object from player id
     for player in players:
@@ -271,25 +262,22 @@ def startNewServer():
     # connect to new server
     global HOST 
     HOST = backupClient.addr[0]
-    print("HOST: " + HOST)
-    global sock 
     sel.unregister(sock)
     sock.close()
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    import time
     time.sleep(2)
-    start_connection((HOST, PORT))
+    start_connection(sock2, (HOST, PORT))
+    global secondTime
+    secondTime = True
 
-def start_connection(addr):
-    print('starting connection to', addr)
-    sock.setblocking(False)
-    sock.connect_ex(addr)
-    sel.register(sock, selectors.EVENT_READ, data=None)
+def start_connection(soc2, addr):
+    print('CLIENT####### starting connection to', addr)
+    soc2.setblocking(False)
+    soc2.connect_ex(addr)
+    sel.register(soc2, selectors.EVENT_READ, data=None)
 
 def updateServerState():# send the server the current state of board
-    print("updating server state")
     #only happen when backup server is being created
-    print("in update server state")
+    print("CLIENT####### in update server state")
     boardstate=gameBoard.getState()
     updateServerBoard_request = {
         "function": "updateBoard",
@@ -298,60 +286,41 @@ def updateServerState():# send the server the current state of board
             "boardstate": boardstate,
         }
     }
-    print("before while")
-    print(rdy_for_new_msg)
-    while not create_request(updateServerBoard_request):
+    while not create_request(sock2, updateServerBoard_request):
         continue
-    print("created request")
-    #waiting_for_server = True
 
-def connectToServer():
-    # connect to new server
-    print("in connectToServer()")
-    sel.unregister(sock)
-    print("unregister sock ")
-   
-    sock.close
-    print("close socket")
-    time.sleep(5)
-    print("sleep for 5 seconds then attemp to start connection")
-    start_connection((HOST, PORT))
-        
 
 def serverCrash():
-    global HOST
-
-    HOST = backupClient.addr[0]
-    print("new host is now " + str(HOST))
     #assert: game is paused and server has crashed
     if isBackup: #client is backup server
         #start backup server
-
         startNewServer()
-        connectToServer()
-
         #client connected to backup server
+        
     else: #client is not backup server
         print("client is not backup server")
         # connect to new server
-        connectToServer()
+        global HOST 
+        HOST= backupClient.addr
+        sel.unregister(sock)
+        socket.close(sock)
+        #start_connection((HOST, PORT))
       
 
 def main():
-    global TITLEFONT, p1
+    global TITLEFONT, FPSCLOCK, p1
     pygame.init()
     TITLEFONT = pygame.font.SysFont('batangbatangchegungsuhgungsuhche', 36)
+    FPSCLOCK = pygame.time.Clock()
     p1 = None
     pygame.display.set_caption('Deny and Conquer')
 
-    start_connection((HOST, PORT)) # establish connection to server
+    start_connection(sock, (HOST, PORT)) # establish connection to server
+ 
     
     showStartScreen()
     screen.fill(BLACK)
-    print("game starting")
-    print(players)
-    print(p1)
-    time.sleep(2)
+    #time.sleep(2)
     
     # init some vars for later use
     rect_x = 0 
@@ -368,13 +337,13 @@ def main():
     pygame.display.flip() # update the screen to reflect changes
 
     while True:
-        #print("At start of event loop")
+        localSock = sock2 if secondTime else sock
         events = sel.select(timeout=0)
         for key, mask in events:
             if mask & selectors.EVENT_READ:
                 # *IF* we are completely done a previous read/write, create a new message class to:
                 if rdy_for_new_msg:
-                    new_messageIn(sock)
+                    new_messageIn(localSock)
                     setReadyForNewMsg(False)
                     continue
                 messageIn = key.data                   
@@ -382,16 +351,11 @@ def main():
                 out = messageIn.read()
                 # if data, process it and create a response 
                 if out == False:
-                    print("recieved empty byte start backup server")
-
-                
-                    print("recieved empty byte start backup server")
                     # Main server has crashed
                     setReadyForNewMsg(True)
                     serverCrash()
                     updateServerState()
-                   
-
+                    break
                 if out:
                     process_response(out, rect_x, rect_y, mouse_pos)
                     waiting_for_server = False
@@ -403,7 +367,6 @@ def main():
                 setReadyForNewMsg(doneWriting)
         
         checkForQuit()
-        #print("Between socket and pygame event loop")
         if not waiting_for_server:
             e = pygame.event.poll()
             if e.type == pygame.KEYDOWN: 
@@ -439,10 +402,8 @@ def main():
                                     "y": rect_y
                                 }
                             }
-                            # print(rdy_for_new_msg)
-                            while not create_request(lock_request):
+                            while not create_request(localSock, lock_request):
                                 continue
-                            print("created request")
                             #wait for server reply
                             waiting_for_server = True
                             
@@ -452,7 +413,6 @@ def main():
                     if gameMap[rect_x][rect_y].squarePos.collidepoint(pygame.mouse.get_pos()): # only if cursor is currently within bounds of square
                         pygame.draw.circle(screen, p1.color, e.pos, radius) # draw a circle
                         roundline(screen, p1.color, e.pos, last_pos,  radius) # draw the line between last position and current position to emulate brush strokes
-                        # print(gameMap[rect_x][rect_y].squarePos)
                     
                 last_pos = e.pos # note brush strokes WILL leave the square boundaries if mouse is moved fast enough
 
@@ -481,8 +441,7 @@ def main():
                         }
                     }
                     #await server response
-                    # print(rdy_for_new_msg)
-                    while not create_request(unlock_request):
+                    while not create_request(localSock, unlock_request):
                         continue
                     print("created unlock request for conquered square")
                         #wait for server reply
@@ -501,8 +460,7 @@ def main():
                         }
                     }
                     #await server response
-                    # print(rdy_for_new_msg)
-                    while not create_request(unlock_request):
+                    while not create_request(localSock, unlock_request):
                         continue
                     print("created unlock request for unconquered square")
                     #wait for server reply
@@ -518,8 +476,8 @@ def main():
                 white_pixel = 0
                 player_pixel = 0
             
-            #print("After pygame event loop")
             pygame.display.flip() # update the screen to reflect changes
+            #FPSCLOCK.tick(1)
 
 # Color in all squares that are owned by a player
 def drawSquares(gameMap, ):

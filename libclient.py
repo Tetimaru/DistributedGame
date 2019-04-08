@@ -73,13 +73,14 @@ class MessageIn:
             return
            
         self.client_request = self._json_decode(self._recv_buffer) # dict form
-        print('received request', repr(self.client_request), 'from', self.addr)
+        #print('received request', repr(self.client_request), 'from', self.addr)
 
     # receive data from socket and store in _recv_buffer
     def _read(self):
         try:
             data = self.sock.recv(4096) # up to 4096 bytes
-            print(repr(data))
+            print("CLIENT####### Read data: " + repr(data) + " from addr " + str(self.addr))
+            #print(self.sock)
         except BlockingIOError: # Resource temporarily unavailable (errno EWOULDBLOCK)
             pass
         else:
@@ -88,8 +89,6 @@ class MessageIn:
             else:
                 # server has crashed
                 return False
-                raise RuntimeError("server _read: received \
-                no data (shouldn't be here?)") # shouldn't happen on server side
     
     # entry point when data is available to be read on socket
     def read(self):
