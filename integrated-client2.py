@@ -189,14 +189,19 @@ def process_pregame(payload):
             if i+1 == player_id:
                 global p1
                 p1 = p
+                print("CLIENT####### adding player " + str(p.id))
                 if playerIsBackup == True:
                     #current client is designated backup machine
                     global isBackup
                     isBackup= True
                     backupClient= p
+                    playerIsBackup=False
+                    print("CLIENT####### backup client is " + str(p.id))
             elif playerIsBackup == True:
                 #current player is designated as backup but is not the current client machine
                 backupClient= p
+                playerIsBackup=False
+                print("CLIENT####### backup client is " + str(p.id))
         
         # start the game
         setReadyForNewMsg(True)
@@ -316,7 +321,6 @@ def main():
     pygame.display.set_caption('Deny and Conquer')
 
     start_connection(sock, (HOST, PORT)) # establish connection to server
- 
     
     showStartScreen()
     screen.fill(BLACK)
