@@ -14,8 +14,8 @@ gameBoard = Board.createBoard(8,8)
 
 # should get host and port from the command line
 
-HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8')
-# HOST = '127.0.0.1'
+#HOST = urllib.request.urlopen('https://ident.me').read().decode('utf8')
+HOST = '142.58.15.120'
 PORT = 65432
 
 ALL_COLORS = [ (255, 0, 0), # red
@@ -281,12 +281,12 @@ def main():
                     # write the data to the socket
                     messageOut = key.data
                     out = messageOut.write()
-        # if timecounter%clock_sync_frequency==0 and sync_ok==True:
-        #     clockSync()
-        #     print('synching clocks')
-        #     timecounter=0
-        # timecounter+=1
-#        print(str(timecounter))
+        if timecounter%clock_sync_frequency==0 and sync_ok==True:
+            clockSync()
+            print('synching clocks')
+            timecounter=0
+        timecounter+=1
+        #print(str(timecounter))
 if __name__ == "__main__":
     main()
 
